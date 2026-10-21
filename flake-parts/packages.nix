@@ -6,7 +6,17 @@
     artifactPkgs = pkgs.extend self.overlays.default;
   in {
     packages = {
-      inherit (artifactPkgs) rke2 k3s;
+      inherit
+        (artifactPkgs)
+        rke2
+        rke2_1_35
+        rke2_1_36
+        rke2_1_37
+        k3s
+        k3s_1_35
+        k3s_1_36
+        k3s_1_37
+        ;
     };
   };
 }
