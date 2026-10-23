@@ -10,7 +10,8 @@ The consuming contract is defined by clanServices `SPEC.md` (D26 two-layer
 rendering, D34 version policy, D40 Cilium lifecycle, D41 Node IPAM, §8 phase
 2). Scope after the round-13 narrowing: **only** the distro runtimes (last 3
 Kubernetes minors per distro), the Cilium chart + committed inflated manifest
-+ airgap image set, and the go-httpbin test fixture. Everything day-2
++ airgap image set, the CoreDNS image (D46 uniform clan-rendered CoreDNS),
+and the go-httpbin test fixture. Everything day-2
 (Envoy Gateway, cert-manager, Flux, external-dns, Multus, Sealed Secrets) is
 GitOps-owned (SPEC §3.3) and no longer carried here.
 
@@ -80,6 +81,10 @@ a digest-pinned docker-archive tarball (dockerTools.pullImage):
 `cilium-airgap-images` directory for VM tests to preload.
 `checks.cilium-airgap-completeness` enforces that the pinned set in
 `pkgs/cilium/versions.nix` matches the manifest's image references exactly.
+
+CoreDNS (SPEC D46): `image-coredns` — the digest-pinned upstream
+`registry.k8s.io/coredns/coredns` tarball for the clan-rendered
+cluster.local DNS.
 
 Test fixture (SPEC §6): `go-httpbin` (source-built v2.26.0) +
 `image-go-httpbin`.
