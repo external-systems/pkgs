@@ -52,8 +52,9 @@
       '';
 
     # Extract a chart's crds/ directory as one multi-doc YAML artifact.
-    # CRDs are separate atomic artifacts (CRDs-first ordering is the
-    # consumer's contract, SPEC D29).
+    # Component-agnostic helper; unused by the surviving cilium component
+    # (the Cilium chart ships no crds/ dir — the operator manages CRDs at
+    # runtime, D40).
     chartCrds = pkgs: {
       name,
       chart,

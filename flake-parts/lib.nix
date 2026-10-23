@@ -39,8 +39,6 @@
   # never a failure.
   componentSupport = {
     cilium = (import ../pkgs/cilium/versions.nix).k8sMinors;
-    envoy-gateway = (import ../pkgs/envoy-gateway/versions.nix).k8sMinors;
-    cert-manager = (import ../pkgs/cert-manager/versions.nix).k8sMinors;
   };
   supportWarnings = lib.flatten (lib.mapAttrsToList (
       component: supported:
