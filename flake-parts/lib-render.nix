@@ -49,6 +49,7 @@
         } \
           ${lib.optionalString (kubeVersion != null) "--kube-version ${kubeVersion}"} \
           > $out
+        sed -i 's/[[:space:]]*$//' $out
       '';
 
     # Extract a chart's crds/ directory as one multi-doc YAML artifact.

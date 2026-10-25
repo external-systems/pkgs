@@ -66,7 +66,7 @@ module merging in clanServices), never re-run helm values here.
 
 | Component | Artifacts |
 |---|---|
-| `manifests/cilium/1.20.3.yaml` | Cilium 1.20.3, canonical profile (`pkgs/cilium/values.nix`): KPR, VXLAN, multi-pool IPAM, BPF masquerade+tproxy, Maglev, pmtu, dual-stack, clustermesh-apiserver, Gateway/Ingress off (D1) |
+| `manifests/cilium/1.20.3.yaml` | Cilium 1.20.3, canonical profile (`pkgs/cilium/values.nix`): KPR, native routing, multi-pool IPAM, auto-direct-node-routes off, Cilium iptables rules off, BPF masquerade+tproxy, Maglev, pmtu, dual-stack, clustermesh-apiserver, Gateway/Ingress off (D1) |
 
 The committed manifest is guarded by `checks.manifest-cilium-freshness`: the
 committed file must be byte-identical to a fresh render of the pin. This is

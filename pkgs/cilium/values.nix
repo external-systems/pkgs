@@ -6,10 +6,9 @@
 {
   kubeProxyReplacement = true;
 
-  routingMode = "tunnel";
-  tunnelProtocol = "vxlan";
-  # Native-routing CIDRs are inert under tunnel mode but pinned so a future
-  # mode flip is a reviewed diff.
+  routingMode = "native";
+  autoDirectNodeRoutes = false;
+  extraConfig.install-iptables-rules = false;
   ipv4NativeRoutingCIDR = "10.0.0.0/8";
   ipv6NativeRoutingCIDR = "fd10::/16";
 
