@@ -15,5 +15,14 @@
   dockerizedVersion = "v1.36.5-rke2r1";
   helmJobVersion = "v0.13.3-build20260909";
 
-  imagesVersions = {};
+  imagesVersions = {
+    images-core-linux-amd64-tar-zst = {
+      url = "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2-images-core.linux-amd64.tar.zst";
+      sha256 = "sha256-rcX+bKJaPryIZuPa0/82kNOMivSl0xLnG/lU5uMhMgM=";
+    };
+    images-core-linux-arm64-tar-zst = {
+      url = "https://github.com/rancher/rke2/releases/download/v1.36.5%2Brke2r1/rke2-images-core.linux-arm64.tar.zst";
+      sha256 = "sha256-UDADlIaXP8Z5IkvylxFt+Zlyy0HvTcM4czRoXG4fFw8=";
+    };
+  };
 }

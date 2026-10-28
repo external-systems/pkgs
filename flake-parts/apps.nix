@@ -81,6 +81,13 @@
                           if [ -z "''${!v}" ]; then echo "failed to extract $v from version.sh" >&2; exit 1; fi
                         done
 
+                        encoded_tag="''${tag//+/%2B}"
+                        core_amd64_url="https://github.com/rancher/rke2/releases/download/$encoded_tag/rke2-images-core.linux-amd64.tar.zst"
+                        core_arm64_url="https://github.com/rancher/rke2/releases/download/$encoded_tag/rke2-images-core.linux-arm64.tar.zst"
+                        echo "hashing core airgap images"
+                        core_amd64_hash=$(nix store prefetch-file --json "$core_amd64_url" | python3 -c "import json, sys; print(json.load(sys.stdin)['hash'])")
+                        core_arm64_hash=$(nix store prefetch-file --json "$core_arm64_url" | python3 -c "import json, sys; print(json.load(sys.stdin)['hash'])")
+
                         write_table() {
                           local vendor_hash="$1"
                           cat > "$table" <<EOF
@@ -102,9 +109,16 @@
                           dockerizedVersion = "$dockerized_version";
                           helmJobVersion = "$helm_job_version";
 
-                          # Unused: the nixpkgs builder's fetchurl'd per-release image-tarball
-                          # passthru attrs — airgap image tarballs are their own flake outputs.
-                          imagesVersions = {};
+                          imagesVersions = {
+                            images-core-linux-amd64-tar-zst = {
+                              url = "$core_amd64_url";
+                              sha256 = "$core_amd64_hash";
+                            };
+                            images-core-linux-arm64-tar-zst = {
+                              url = "$core_arm64_url";
+                              sha256 = "$core_arm64_hash";
+                            };
+                          };
                         }
                         EOF
                         }

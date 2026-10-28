@@ -17,15 +17,17 @@ final: prev: let
       rke2Versions;
   in
     (final.callPackage rke2Builder {}).overrideAttrs (old: {
-      # Trim nixpkgs' passthru: its tests attr indexes nixosTests.rke2
-      # package attrs that do not exist for these minors, and its fetchurl'd
-      # image tarballs are unused here. Re-attach buildGoModule's canonical
-      # overrideModAttrs slot so strictifying eval does not warn
+      # Remove only nixpkgs' tests attr: it indexes nixosTests.rke2 package
+      # attrs that do not exist for these minors. Preserve the airgap image
+      # passthru consumed by clanServices, and re-attach buildGoModule's
+      # canonical overrideModAttrs slot so strictifying eval does not warn
       # "passthru.overrideModAttrs missing after overrideAttrs".
-      passthru = {
-        updateScript = null;
-        overrideModAttrs = old.passthru.overrideModAttrs or (_: _: {});
-      };
+      passthru =
+        builtins.removeAttrs old.passthru ["tests"]
+        // {
+          updateScript = null;
+          overrideModAttrs = old.passthru.overrideModAttrs or (_: _: {});
+        };
     });
 in {
   rke2_1_35 = mkRke2 "1_35";

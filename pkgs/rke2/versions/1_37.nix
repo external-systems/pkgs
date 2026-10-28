@@ -26,8 +26,14 @@
   dockerizedVersion = "v1.37.1-rke2r1";
   helmJobVersion = "v0.13.3-build20260909";
 
-  # Unused: the nixpkgs builder's fetchurl'd per-release image-tarball
-  # passthru attrs — airgap image tarballs will be exported as their own
-  # granular flake outputs in a later step.
-  imagesVersions = {};
+  imagesVersions = {
+    images-core-linux-amd64-tar-zst = {
+      url = "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2-images-core.linux-amd64.tar.zst";
+      sha256 = "sha256-4VJWpQFWJZ+SBTe+mKuqwjOW0JvEQzdFcYMLhNjql44=";
+    };
+    images-core-linux-arm64-tar-zst = {
+      url = "https://github.com/rancher/rke2/releases/download/v1.37.1%2Brke2r1/rke2-images-core.linux-arm64.tar.zst";
+      sha256 = "sha256-8UESVshnc25mJI8UNzrUZipRk5JRignrZnDZ2sDDnBs=";
+    };
+  };
 }
