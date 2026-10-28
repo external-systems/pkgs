@@ -9,9 +9,9 @@ vars, no fleet policy.
 The consuming contract is defined by clanServices `SPEC.md` (D26 two-layer
 rendering, D34 version policy, D40 Cilium lifecycle, D41 Node IPAM, §8 phase
 2). Scope after the round-13 narrowing: **only** the distro runtimes (last 3
-Kubernetes minors per distro), the Cilium chart + committed inflated manifest
-+ airgap image set, the CoreDNS image (D46 uniform clan-rendered CoreDNS),
-and the go-httpbin test fixture. Everything day-2
+Kubernetes minors per distro), the IfState package overlay, the Cilium chart +
+committed inflated manifest + airgap image set, the CoreDNS image (D46 uniform
+clan-rendered CoreDNS), and the go-httpbin test fixture. Everything day-2
 (Envoy Gateway, cert-manager, Flux, external-dns, Multus, Sealed Secrets) is
 GitOps-owned (SPEC §3.3) and no longer carried here.
 
@@ -21,20 +21,25 @@ GitOps-owned (SPEC §3.3) and no longer carried here.
 inputs.pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
 ```
 
-- **Packages** — `packages.x86_64-linux.<name>` for direct builds:
+- **Packages** — `packages.<system>.<name>` for direct builds on
+  `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
-- **Overlay** — `overlays.default` applied onto your own nixpkgs package set
-  gives you the pinned artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / …. The
-  builder expressions come from the consumer's nixpkgs: rke2 needs any
-  nixpkgs shipping `pkgs/applications/networking/cluster/rke2/builder.nix`
-  (all version data is pinned locally in `pkgs/rke2/versions/`); k3s rides
-  the consumer's `k3s_1_35`/`k3s_1_36`/`k3s_1_37` builders, so consumer
-  nixpkgs must ship those minors at the pinned patches (the pinned nixpkgs
-  here is the reference).
-- **Version metadata** — `lib.versions.matrix` exposes the full last-3-minors
-  matrix per distro (`kubernetes`, `k3s`, `rke2`, commits per minor);
-  `lib.versions.kubernetes` / `.k3s` / `.rke2` are latest-minor aliases;
-  `lib.versions.latestMinor` names the default.
+- **Overlays** — `overlays.default` composes the Kubernetes and IfState
+  artifact overlays; `overlays.kubernetes` and `overlays.ifstate` are also
+  exported separately. Applying the default overlay gives you the pinned
+  artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`. The builder
+  expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
+  shipping `pkgs/applications/networking/cluster/rke2/builder.nix` (all
+  version data is pinned locally in `pkgs/rke2/versions/`); k3s rides the
+  consumer's `k3s_1_35`/`k3s_1_36`/`k3s_1_37` builders, so consumer nixpkgs
+  must ship those minors at the pinned patches. Following this flake's
+  `nixpkgs` input is the supported way to keep that contract aligned.
+- **Artifact metadata** — `lib.versions.matrix` exposes the full
+  last-3-minors matrix per distro (`kubernetes`, `k3s`, `rke2`, commits per
+  minor); `lib.versions.kubernetes` / `.k3s` / `.rke2` are latest-minor
+  aliases. `lib.cilium.manifest` is the committed base manifest,
+  `lib.cilium.imagePackageNames` lists its per-system tarball outputs, and
+  `lib.coredns.imageRef` is the digest-pinned CoreDNS reference.
 
 ## Version matrix (SPEC D34)
 
@@ -78,7 +83,8 @@ Every container image the committed Cilium manifest references is exported as
 a digest-pinned docker-archive tarball (dockerTools.pullImage):
 `image-cilium-agent`, `image-cilium-envoy`, `image-cilium-operator`,
 `image-cilium-clustermesh-apiserver`, plus the aggregate
-`cilium-airgap-images` directory for VM tests to preload.
+`cilium-airgap-images` directory for VM tests to preload. Each supported
+system selects its matching amd64 or arm64 image and output hash.
 `checks.cilium-airgap-completeness` enforces that the pinned set in
 `pkgs/cilium/versions.nix` matches the manifest's image references exactly.
 
@@ -115,8 +121,8 @@ nix flake check        # lint gate (alejandra + statix + deadnix),
                        # cilium airgap completeness
 ```
 
-`git add` new files before evaluating — Nix reads the git tree. The nixpkgs
-pin tracks clan-core main's nixpkgs revision (one nixpkgs decision for the
-org; its default Go satisfies the distro go.mod floors). Every fetch is a
-fixed-output derivation from a public URL with a committed hash; airgap
-image sets cover the committed Cilium manifest.
+`git add` new files before evaluating — Nix reads the git tree. This repo is
+the organization's nixpkgs authority: downstream flakes follow `pkgs/nixpkgs`
+so routine artifact and nixpkgs updates remain independent of consumer update
+lifecycles. Every fetch is a fixed-output derivation from a public URL with a
+committed hash; airgap image sets cover the committed Cilium manifest.

@@ -10,6 +10,7 @@
       # source). Run from the repo root; review the git diff before commit.
       update-manifests = {
         type = "app";
+        meta.description = "Regenerate committed manifests from pinned charts";
         program = lib.getExe (pkgs.writeShellApplication {
           name = "update-manifests";
           runtimeInputs = [pkgs.nix pkgs.git];
@@ -32,6 +33,7 @@
       # Usage: nix run .#update-rke2 -- 1.35   (run from the repo root)
       update-rke2 = {
         type = "app";
+        meta.description = "Update one pinned RKE2 minor to its latest patch";
         program = lib.getExe (pkgs.writeShellApplication {
           name = "update-rke2";
           runtimeInputs = with pkgs; [nix git curl python3 gnugrep];

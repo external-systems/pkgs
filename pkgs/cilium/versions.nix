@@ -23,28 +23,40 @@
       repo = "quay.io/cilium/cilium";
       tag = "v1.20.3";
       digest = "sha256:95cfa5c2427cc6b452c00908778d0566311f572589284af949d06a013db1a849";
-      sha256 = "sha256-Gc4dLyAffosj0E8cUP5ZybjUwYrdCoeMW+9xPMlTDhA=";
+      sha256 = {
+        amd64 = "sha256-Gc4dLyAffosj0E8cUP5ZybjUwYrdCoeMW+9xPMlTDhA=";
+        arm64 = "sha256-R5fh85JwfKigB/0eodhg9No0hUYK3u2h9ID9Cjl8il4=";
+      };
     }
     {
       name = "envoy";
       repo = "quay.io/cilium/cilium-envoy";
       tag = "v1.38.6-1791537840-00e749f11f69334c625e53fc1ce2fc6c7f34a51f";
       digest = "sha256:d6c8c0c91954d1885026d82a31b341f37dcd34a4b127fdaf1587e43ddd224cef";
-      sha256 = "sha256-/wc4KCXl3r6QbJcmwOJQH9UGELTl/F8wNcwBYFN0JL4=";
+      sha256 = {
+        amd64 = "sha256-/wc4KCXl3r6QbJcmwOJQH9UGELTl/F8wNcwBYFN0JL4=";
+        arm64 = "sha256-P4ngArouFsth13e/MPy0jxoM1cbUa4aVqWVrTXOvb8w=";
+      };
     }
     {
       name = "operator";
       repo = "quay.io/cilium/operator-generic";
       tag = "v1.20.3";
       digest = "sha256:efdd8d89d6d8f63d21a065fa2f9e17614a2b3ac9371b221af9355f63829e2dbc";
-      sha256 = "sha256-xeDBGVmAk5pywcS89NekocAq6kOjj3fj9ubVJ4et9Gg=";
+      sha256 = {
+        amd64 = "sha256-xeDBGVmAk5pywcS89NekocAq6kOjj3fj9ubVJ4et9Gg=";
+        arm64 = "sha256-jejxJYTRuexHOF2AR9BQeW9xewAfOsht15nd0ZUo2Uw=";
+      };
     }
     {
       name = "clustermesh-apiserver";
       repo = "quay.io/cilium/clustermesh-apiserver";
       tag = "v1.20.3";
       digest = "sha256:5c8dca0d0b77bb593df157be39f6c9c868dc08922bbd0540ac0a56815341b227";
-      sha256 = "sha256-O3O4BtvbdjGozMhS/sp3Cx3IY1xqQmr52nPwhC1p1RQ=";
+      sha256 = {
+        amd64 = "sha256-O3O4BtvbdjGozMhS/sp3Cx3IY1xqQmr52nPwhC1p1RQ=";
+        arm64 = "sha256-pf1tIU4/IvGsvLIkh8FunJalAhWwbqwf0uZL9Qr7A2U=";
+      };
     }
   ];
 }

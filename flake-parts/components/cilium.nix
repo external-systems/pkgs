@@ -11,11 +11,17 @@
 {self, ...}: let
   versions = import ../../pkgs/cilium/versions.nix;
 in {
-  # Committed-manifest registry: update-manifests re-renders each entry
-  # (package output) into manifests/<path>.
-  flake.lib.manifestArtifacts.cilium = {
-    package = "manifest-cilium";
-    path = "cilium/${versions.chartVersion}.yaml";
+  flake.lib = {
+    # Committed-manifest registry: update-manifests re-renders each entry
+    # (package output) into manifests/<path>.
+    manifestArtifacts.cilium = {
+      package = "manifest-cilium";
+      path = "cilium/${versions.chartVersion}.yaml";
+    };
+    cilium = {
+      manifest = self + "/manifests/cilium/${versions.chartVersion}.yaml";
+      imagePackageNames = map (img: "image-cilium-${img.name}") versions.images;
+    };
   };
 
   perSystem = {pkgs, ...}: let
@@ -30,16 +36,22 @@ in {
       values = import ../../pkgs/cilium/values.nix;
       kubeVersion = self.lib.versions.kubernetes;
     };
+    arch =
+      if pkgs.stdenv.hostPlatform.isx86_64
+      then "amd64"
+      else if pkgs.stdenv.hostPlatform.isAarch64
+      then "arm64"
+      else throw "unsupported Cilium airgap system ${pkgs.stdenv.hostPlatform.system}";
     imageTarballs = builtins.listToAttrs (map (img: {
         name = "image-cilium-${img.name}";
         value = pkgs.dockerTools.pullImage {
-          inherit (img) sha256;
+          sha256 = img.sha256.${arch};
           imageName = img.repo;
           imageDigest = img.digest;
           finalImageName = img.repo;
           finalImageTag = img.tag;
           os = "linux";
-          arch = "amd64";
+          inherit arch;
         };
       })
       versions.images);

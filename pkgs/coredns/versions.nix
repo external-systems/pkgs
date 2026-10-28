@@ -8,6 +8,9 @@
   version = "1.14.7";
   repo = "registry.k8s.io/coredns/coredns";
   tag = "v1.14.7";
-  digest = "sha256:2329f5f0e7e79fbe56dcdf11ecc4337ee2476bb251095bc275fe9461cb88a55b";
-  sha256 = "sha256-u4VwkSStPrZRfbm4qNhGr07fj2Hdbp78L01kUI4Yhcs=";
+  digest = "sha256:7efd3c635b03efd68c4e8398fc45f0d993d0e9ab016f72c1cefb0fd6d01aa286";
+  sha256 = {
+    amd64 = "sha256-u4VwkSStPrZRfbm4qNhGr07fj2Hdbp78L01kUI4Yhcs=";
+    arm64 = "sha256-NH+QDqR+p3i1jh4xvQH8mjsZ07aHrm/xAOFiOcO0lfA=";
+  };
 }

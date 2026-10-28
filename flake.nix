@@ -2,10 +2,9 @@
   description = "external-systems artifact flake — pinned, source-built packages and source materials for downstream flakes";
 
   inputs = {
-    # One nixpkgs decision for the org: the same revision clan-core main
-    # pins (and external-systems/clanServices thereby consumes). Its default
-    # go (1.26.8) satisfies the rke2/k3s 1.37 go.mod floor.
-    nixpkgs.url = "github:NixOS/nixpkgs/319e4cebef10cbb636c6ea392137b52ad105336a";
+    # Artifact and downstream nixpkgs authority. Downstream flakes follow
+    # this input so artifact updates do not require a second nixpkgs update.
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     flake-parts = {
       url = "github:hercules-ci/flake-parts";
@@ -17,7 +16,7 @@
 
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
-      systems = ["x86_64-linux"];
+      systems = ["x86_64-linux" "aarch64-linux"];
       imports = [(inputs.import-tree ./flake-parts)];
     };
 }

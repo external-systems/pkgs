@@ -8,6 +8,7 @@
     packages = {
       inherit
         (artifactPkgs)
+        ifstate
         rke2
         rke2_1_35
         rke2_1_36
