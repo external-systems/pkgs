@@ -110,15 +110,23 @@ Cilium chart bumps: edit `pkgs/cilium/versions.nix` (new version + hash via
 `nix store prefetch-file --json <url>`, refresh `images` from a fresh
 render's image references), then `nix run .#update-manifests`. k3s bumps ride
 `nix flake update nixpkgs` — verify the minors' patches still match upstream
-latest afterwards.
+latest afterwards, and move the dev lock to the same rev in the same commit
+(`checks.dev-lock-sync` prints the exact command).
 
 ## Development
 
+Apps, checks, the formatter and the dev shell live in the `dev` flake-parts
+partition (`dev/flake-module.nix`), whose inputs are locked separately in
+`dev/flake.lock`. Consumers of `packages`, `overlays` or `lib` never fetch
+them.
+
 ```bash
-nix fmt .              # alejandra
-nix flake check        # lint gate (alejandra + statix + deadnix),
-                       # per-minor k8s parity, manifest freshness,
-                       # cilium airgap completeness
+nix develop            # devenv shell (devenv/default.nix) with treefmt
+nix fmt                # treefmt: alejandra, deadnix, nixf-diagnose,
+                       # shellcheck, sizelint, statix
+nix flake check        # checks.treefmt, dev-lock-sync, per-minor k8s
+                       # parity, manifest freshness, cilium airgap
+                       # completeness
 ```
 
 `git add` new files before evaluating — Nix reads the git tree. This repo is
@@ -126,3 +134,39 @@ the organization's nixpkgs authority: downstream flakes follow `pkgs/nixpkgs`
 so routine artifact and nixpkgs updates remain independent of consumer update
 lifecycles. Every fetch is a fixed-output derivation from a public URL with a
 committed hash; airgap image sets cover the committed Cilium manifest.
+
+## Org flake standard (`flakeModules`)
+
+Every external-systems flake repo imports these instead of copying them.
+They read the importing repo's own inputs, so this flake adds nothing to a
+consumer's main `flake.lock`; the repo declares `treefmt-nix`, `devenv` and
+`dev-nixpkgs` in its `dev/flake.nix`.
+
+| Module | Gives |
+|---|---|
+| `flakeModules.treefmt` | org linters as treefmt programs: `formatter`, `checks.treefmt` |
+| `flakeModules.devenv` | `devShells.default` from `devenv.shells.default`, with the pure-eval root fallback and container outputs off |
+| `flakeModules.dev` | both, treefmt in the shell, and `checks.dev-lock-sync` (dev `dev-nixpkgs` rev equals root `nixpkgs` rev) |
+
+```nix
+# flake.nix
+partitionedAttrs = {
+  apps = "dev";
+  checks = "dev";
+  devShells = "dev";
+  formatter = "dev";
+};
+partitions.dev = {
+  module = ./dev/flake-module.nix;
+  extraInputsFlake = ./dev;
+};
+
+# dev/flake-module.nix
+{inputs, ...}: {
+  imports = [inputs.pkgs.flakeModules.dev];
+  perSystem.devenv.shells.default.imports = [../devenv];
+}
+```
+
+The full layout, including docs through external-systems/presenting, is in
+the `nix-style` skill (external-systems/skills).

@@ -17,6 +17,25 @@
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;} {
       systems = ["x86_64-linux" "aarch64-linux"];
-      imports = [(inputs.import-tree ./flake-parts)];
+
+      imports = [
+        inputs.flake-parts.flakeModules.partitions
+        (inputs.import-tree ./flake-parts)
+      ];
+
+      # Apps, checks, formatter and devShell are evaluated only on demand;
+      # a consumer reading packages, overlays or lib never fetches the dev
+      # inputs (dev/flake.nix). packages stays here: consumers build them.
+      partitionedAttrs = {
+        apps = "dev";
+        checks = "dev";
+        devShells = "dev";
+        formatter = "dev";
+      };
+
+      partitions.dev = {
+        module = ./dev/flake-module.nix;
+        extraInputsFlake = ./dev;
+      };
     };
 }

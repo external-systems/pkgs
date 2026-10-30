@@ -4,23 +4,11 @@
   ...
 }: {
   perSystem = {pkgs, ...}: {
+    # Per minor, both distro runtimes must package the SAME Kubernetes
+    # release (SPEC D34). Formatting and lint are checks.treefmt, from
+    # flakeModules.treefmt in the dev partition.
     checks =
-      {
-        # Format/lint gate — fails `nix flake check`, which CI runs.
-        lint =
-          pkgs.runCommand "lint" {
-            nativeBuildInputs = with pkgs; [alejandra statix deadnix];
-          } ''
-            cd ${lib.sources.sourceFilesBySuffices self [".nix"]}
-            alejandra --check .
-            statix check .
-            deadnix --fail .
-            touch $out
-          '';
-      }
-      # Per minor, both distro runtimes must package the SAME Kubernetes
-      # release (SPEC D34).
-      // lib.mapAttrs' (minor: versions:
+      lib.mapAttrs' (minor: versions:
         lib.nameValuePair "k8s-version-parity-${minor}" (pkgs.runCommand "k8s-version-parity-${minor}" {
             k3sK8s = versions.kubernetes;
             rke2K8s = builtins.head (builtins.split ''\+'' (lib.removePrefix "v" versions.rke2));
