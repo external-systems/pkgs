@@ -23,7 +23,7 @@ final: prev: let
       # canonical overrideModAttrs slot so strictifying eval does not warn
       # "passthru.overrideModAttrs missing after overrideAttrs".
       passthru =
-        builtins.removeAttrs old.passthru ["tests"]
+        removeAttrs old.passthru ["tests"]
         // {
           updateScript = null;
           overrideModAttrs = old.passthru.overrideModAttrs or (_: _: {});
