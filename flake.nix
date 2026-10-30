@@ -23,13 +23,13 @@
         (inputs.import-tree ./flake-parts)
       ];
 
-      # Apps, checks, formatter and devShell are evaluated only on demand;
-      # a consumer reading packages, overlays or lib never fetches the dev
+      # Apps, checks and the formatter are evaluated only on demand; a
+      # consumer reading packages, overlays or lib never fetches the dev
       # inputs (dev/flake.nix). packages stays here: consumers build them.
+      # The dev shell is devenv (devenv.yaml), not a flake output.
       partitionedAttrs = {
         apps = "dev";
         checks = "dev";
-        devShells = "dev";
         formatter = "dev";
       };
 

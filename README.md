@@ -110,23 +110,26 @@ Cilium chart bumps: edit `pkgs/cilium/versions.nix` (new version + hash via
 `nix store prefetch-file --json <url>`, refresh `images` from a fresh
 render's image references), then `nix run .#update-manifests`. k3s bumps ride
 `nix flake update nixpkgs` — verify the minors' patches still match upstream
-latest afterwards, and move the dev lock to the same rev in the same commit
-(`checks.dev-lock-sync` prints the exact command).
+latest afterwards, then run `sync-locks` in the same commit so
+`dev/flake.lock` and `devenv.yaml`/`devenv.lock` follow (`checks.lock-sync`
+enforces it).
 
 ## Development
 
-Apps, checks, the formatter and the dev shell live in the `dev` flake-parts
-partition (`dev/flake-module.nix`), whose inputs are locked separately in
+Needs Nix and devenv. The shell is the devenv CLI (`devenv.yaml` imports the
+org shell from `./devenv`); apps, checks, the formatter, docs and slides live
+in the `dev` flake-parts partition, whose inputs are locked separately in
 `dev/flake.lock`. Consumers of `packages`, `overlays` or `lib` never fetch
 them.
 
 ```bash
-nix develop            # devenv shell (devenv/default.nix) with treefmt
-nix fmt                # treefmt: alejandra, deadnix, nixf-diagnose,
+devenv allow           # auto-activation (after `devenv hook`)
+fmt                    # treefmt: alejandra, deadnix, nixf-diagnose,
                        # shellcheck, sizelint, statix
-nix flake check        # checks.treefmt, dev-lock-sync, per-minor k8s
-                       # parity, manifest freshness, cilium airgap
-                       # completeness
+check                  # nix flake check: treefmt, lock-sync, docs and
+                       # slides, per-minor k8s parity, manifest
+                       # freshness, cilium airgap completeness
+devenv up              # live docs :8000 and slides :8001
 ```
 
 `git add` new files before evaluating — Nix reads the git tree. This repo is
@@ -135,38 +138,11 @@ so routine artifact and nixpkgs updates remain independent of consumer update
 lifecycles. Every fetch is a fixed-output derivation from a public URL with a
 committed hash; airgap image sets cover the committed Cilium manifest.
 
-## Org flake standard (`flakeModules`)
+## Org flake standard
 
-Every external-systems flake repo imports these instead of copying them.
-They read the importing repo's own inputs, so this flake adds nothing to a
-consumer's main `flake.lock`; the repo declares `treefmt-nix`, `devenv` and
-`dev-nixpkgs` in its `dev/flake.nix`.
-
-| Module | Gives |
-|---|---|
-| `flakeModules.treefmt` | org linters as treefmt programs: `formatter`, `checks.treefmt` |
-| `flakeModules.devenv` | `devShells.default` from `devenv.shells.default`, with the pure-eval root fallback and container outputs off |
-| `flakeModules.dev` | both, treefmt in the shell, and `checks.dev-lock-sync` (dev `dev-nixpkgs` rev equals root `nixpkgs` rev) |
-
-```nix
-# flake.nix
-partitionedAttrs = {
-  apps = "dev";
-  checks = "dev";
-  devShells = "dev";
-  formatter = "dev";
-};
-partitions.dev = {
-  module = ./dev/flake-module.nix;
-  extraInputsFlake = ./dev;
-};
-
-# dev/flake-module.nix
-{inputs, ...}: {
-  imports = [inputs.pkgs.flakeModules.dev];
-  perSystem.devenv.shells.default.imports = [../devenv];
-}
-```
-
-The full layout, including docs through external-systems/presenting, is in
-the `nix-style` skill (external-systems/skills).
+pkgs also carries what every external-systems repo builds on:
+`flakeModules.treefmt`, `flakeModules.dev`, the org devenv shell (`devenv/`)
+and `templates.default`. Start a repo with
+`nix flake init -t github:external-systems/pkgs`. The full description is in
+the docs site (`documentation/docs/flake-standard.md`) and the `nix-style`
+skill (external-systems/skills).
