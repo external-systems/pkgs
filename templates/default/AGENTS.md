@@ -6,7 +6,7 @@ CHANGE ME: one paragraph on what this repo is.
 - `flake.nix`: consumer-facing inputs (all follow external-systems/pkgs) and the dev partition wiring.
 - `flake-parts/`: consumer-facing flake-parts modules, auto-imported (import-tree).
 - `dev/flake.nix` + `dev/flake.lock`: dev-only inputs. `dev/flake-module.nix`: the dev partition (formatter, checks, apps, docs).
-- `devenv.yaml` + `devenv.lock` + `devenv.nix`: the dev shell. The org shell comes from `pkgs/devenv`.
+- `devenv.yaml` + `devenv.lock` + `devenv.nix`: the dev shell. The org shell comes from external-systems/pkgs (`org-pkgs/devenv` in devenv.yaml).
 - `documentation/`: MkDocs site (`docs/`) and reveal.js deck (`slides/`).
 
 ## Tool loop

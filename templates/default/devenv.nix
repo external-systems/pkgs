@@ -1,4 +1,4 @@
-# This repo's additions to the org shell (pkgs/devenv): languages,
+# This repo's additions to the org shell (org-pkgs/devenv): languages,
 # services and app processes. Examples:
 #   languages.rust.enable = true;
 #   languages.python = { enable = true; uv.enable = true; };

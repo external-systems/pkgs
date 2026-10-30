@@ -9,8 +9,8 @@ its sandbox on, the default) and devenv; nothing else.
 flake.nix / flake.lock      consumer outputs; inputs follow pkgs
 dev/flake.nix / flake.lock  dev partition inputs: treefmt-nix, presenting
 dev/flake-module.nix        imports inputs.pkgs.flakeModules.dev + docs
-devenv.yaml / devenv.lock   pkgs input, nixpkgs follows pkgs/nixpkgs,
-                            imports pkgs/devenv (the org shell)
+devenv.yaml / devenv.lock   org-pkgs input (this repo), nixpkgs follows
+                            org-pkgs/nixpkgs, imports org-pkgs/devenv
 devenv.nix                  this repo's languages, services, processes
 documentation/              mkdocs.yml, docs/, slides/, module.nix
 ```
@@ -56,6 +56,12 @@ These come from `legacyPackages`, partitioned to `dev`, so `packages`
 stay at the root and consumers never fetch docs inputs. A repo whose
 consumers use its `legacyPackages` cannot partition it; there, build
 `.#checks.<system>.documentation` instead.
+
+## Why the devenv input is `org-pkgs`
+
+devenv passes every `devenv.yaml` input to `devenv.nix` as a module
+argument. An input named `pkgs` would replace nixpkgs' `pkgs` and fail with
+"attribute 'bash' missing", so the pkgs flake is always `org-pkgs` there.
 
 ## Three lockfiles, one nixpkgs
 

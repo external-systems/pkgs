@@ -4,7 +4,7 @@
 #
 # Three lockfiles must agree on nixpkgs: flake.lock (consumers),
 # dev/flake.lock (dev-nixpkgs) and devenv.lock (the devenv CLI shell,
-# nixpkgs following pkgs/nixpkgs). checks.lock-sync fails when they
+# nixpkgs following org-pkgs/nixpkgs). checks.lock-sync fails when they
 # drift; `sync-locks` (devenv script, or nix run .#sync-locks) re-pins
 # dev/flake.lock and devenv.yaml to flake.lock.
 {
@@ -73,7 +73,7 @@ in {
           if pkgsRev != null
           then ''
             sed -i -E 's#(url: github:external-systems/pkgs)[^[:space:]]*#\1/${pkgsRev}#' devenv.yaml
-            devenv update pkgs
+            devenv update org-pkgs
           ''
           else ''
             sed -i -E 's#(url: github:NixOS/nixpkgs)[^[:space:]]*#\1/${rootRev}#' devenv.yaml
