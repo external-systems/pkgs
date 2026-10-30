@@ -1,3 +1,5 @@
 .baton-pass/
 result
 .direnv
+.devenv*
+devenv.local.nix
