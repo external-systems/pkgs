@@ -6,9 +6,9 @@ its sandbox on, the default) and devenv; nothing else.
 ## Layout
 
 ```
-flake.nix / flake.lock      consumer outputs; inputs follow pkgs
+flake.nix / flake.lock      consumer outputs; inputs follow org-pkgs
 dev/flake.nix / flake.lock  dev partition inputs: treefmt-nix, presenting
-dev/flake-module.nix        imports inputs.pkgs.flakeModules.dev + docs
+dev/flake-module.nix        imports inputs.org-pkgs.flakeModules.dev + docs
 devenv.yaml / devenv.lock   org-pkgs input (this repo), nixpkgs follows
                             org-pkgs/nixpkgs, imports org-pkgs/devenv
 devenv.nix                  this repo's languages, services, processes
@@ -57,11 +57,13 @@ stay at the root and consumers never fetch docs inputs. A repo whose
 consumers use its `legacyPackages` cannot partition it; there, build
 `.#checks.<system>.documentation` instead.
 
-## Why the devenv input is `org-pkgs`
+## Why the input is `org-pkgs`
 
-devenv passes every `devenv.yaml` input to `devenv.nix` as a module
-argument. An input named `pkgs` would replace nixpkgs' `pkgs` and fail with
-"attribute 'bash' missing", so the pkgs flake is always `org-pkgs` there.
+The repo is external-systems/pkgs, but every `flake.nix` and `devenv.yaml`
+names the input `org-pkgs`. `pkgs` means the nixpkgs package set everywhere
+else (module arguments, `perSystem`), and devenv passes every `devenv.yaml`
+input to `devenv.nix` as a module argument, so an input named `pkgs`
+replaces nixpkgs' `pkgs` and fails with "attribute 'bash' missing".
 
 ## Three lockfiles, one nixpkgs
 

@@ -1,6 +1,6 @@
 # The org dev partition base: treefmt, the lock-sync check and app, and
 # the docs build as checks. Consumer: partitions.dev.module =
-# ./dev/flake-module.nix, which imports inputs.pkgs.flakeModules.dev.
+# ./dev/flake-module.nix, which imports inputs.org-pkgs.flakeModules.dev.
 #
 # Three lockfiles must agree on nixpkgs: flake.lock (consumers),
 # dev/flake.lock (dev-nixpkgs) and devenv.lock (the devenv CLI shell,
@@ -31,10 +31,13 @@
   rootLock = lockOf "${self}/flake.lock";
   hasDevenv = builtins.pathExists "${self}/devenv.lock";
 
-  # pkgs itself owns nixpkgs; every other repo pins nixpkgs through pkgs.
+  # pkgs itself owns nixpkgs; every other repo pins nixpkgs through the
+  # org-pkgs input (`pkgs` in repos not yet renamed).
+  rootInputs = rootLock.nodes.${rootLock.root}.inputs;
+  pkgsInput = lib.findFirst (name: rootInputs ? ${name}) null ["org-pkgs" "pkgs"];
   pkgsRev =
-    if rootLock.nodes.${rootLock.root}.inputs ? pkgs
-    then revOf rootLock "pkgs"
+    if pkgsInput != null
+    then revOf rootLock pkgsInput
     else null;
 
   revs =
