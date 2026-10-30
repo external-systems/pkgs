@@ -12,6 +12,9 @@
       # treefmt + checks.lock-sync + apps.sync-locks + docs as checks.
       # The one import a repo's dev partition needs.
       dev = ../flakeModules/dev.nix;
+      # flake-parts' flakeModules module aliases the `flakeModule` output
+      # to flakeModules.default, which `nix flake check` evaluates.
+      default = ../flakeModules/dev.nix;
     };
 
     # `nix flake init -t github:external-systems/pkgs`
