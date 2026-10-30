@@ -18,7 +18,8 @@ GitOps-owned (SPEC §3.3) and no longer carried here.
 ## Consuming
 
 ```nix
-inputs.pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
+# Name the input org-pkgs, never pkgs (pkgs is the nixpkgs package set).
+inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
 ```
 
 - **Packages** — `packages.<system>.<name>` for direct builds on

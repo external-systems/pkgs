@@ -1,5 +1,5 @@
 # The org devenv shell, imported by every external-systems repo's
-# devenv.yaml (`imports: [pkgs/devenv]`), so every repo has the same
+# devenv.yaml (`imports: [org-pkgs/devenv]`), so every repo has the same
 # commands. A repo's own devenv.nix adds languages, services and app
 # processes on top. Plain devenv module: never reference flake outputs.
 {

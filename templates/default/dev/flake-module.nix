@@ -2,7 +2,7 @@
 # consumer of this flake never evaluates it.
 {inputs, ...}: {
   imports = [
-    inputs.pkgs.flakeModules.dev
+    inputs.org-pkgs.flakeModules.dev
     ../documentation/module.nix
   ];
 }

@@ -1,10 +1,10 @@
 # The org dev partition base: treefmt, the lock-sync check and app, and
 # the docs build as checks. Consumer: partitions.dev.module =
-# ./dev/flake-module.nix, which imports inputs.pkgs.flakeModules.dev.
+# ./dev/flake-module.nix, which imports inputs.org-pkgs.flakeModules.dev.
 #
 # Three lockfiles must agree on nixpkgs: flake.lock (consumers),
 # dev/flake.lock (dev-nixpkgs) and devenv.lock (the devenv CLI shell,
-# nixpkgs following pkgs/nixpkgs). checks.lock-sync fails when they
+# nixpkgs following org-pkgs/nixpkgs). checks.lock-sync fails when they
 # drift; `sync-locks` (devenv script, or nix run .#sync-locks) re-pins
 # dev/flake.lock and devenv.yaml to flake.lock.
 {
@@ -31,10 +31,13 @@
   rootLock = lockOf "${self}/flake.lock";
   hasDevenv = builtins.pathExists "${self}/devenv.lock";
 
-  # pkgs itself owns nixpkgs; every other repo pins nixpkgs through pkgs.
+  # pkgs itself owns nixpkgs; every other repo pins nixpkgs through the
+  # org-pkgs input (`pkgs` in repos not yet renamed).
+  rootInputs = rootLock.nodes.${rootLock.root}.inputs;
+  pkgsInput = lib.findFirst (name: rootInputs ? ${name}) null ["org-pkgs" "pkgs"];
   pkgsRev =
-    if rootLock.nodes.${rootLock.root}.inputs ? pkgs
-    then revOf rootLock "pkgs"
+    if pkgsInput != null
+    then revOf rootLock pkgsInput
     else null;
 
   revs =
@@ -73,7 +76,7 @@ in {
           if pkgsRev != null
           then ''
             sed -i -E 's#(url: github:external-systems/pkgs)[^[:space:]]*#\1/${pkgsRev}#' devenv.yaml
-            devenv update pkgs
+            devenv update org-pkgs
           ''
           else ''
             sed -i -E 's#(url: github:NixOS/nixpkgs)[^[:space:]]*#\1/${rootRev}#' devenv.yaml
