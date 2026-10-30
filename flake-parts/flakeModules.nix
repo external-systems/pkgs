@@ -29,7 +29,7 @@
             nix run .#sync-locks
             devenv allow          # auto-activation (needs `devenv hook`)
             check                 # nix flake check, inside the shell
-            devenv up             # live docs :8000 and slides :8001
+            devenv up             # live docs :8981 and slides :8982
 
         AGENTS.md describes the layout for coding agents.
       '';

@@ -32,6 +32,8 @@
         apps = "dev";
         checks = "dev";
         formatter = "dev";
+        # Docs/slides: `nix build .#documentation` (flakeModules.dev).
+        legacyPackages = "dev";
       };
 
       partitions.dev = {

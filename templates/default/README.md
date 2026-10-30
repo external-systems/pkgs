@@ -10,5 +10,6 @@ Needs Nix and devenv.
 devenv allow     # auto-activates the shell on cd (after `devenv hook`)
 fmt              # format and lint
 check            # nix flake check
-devenv up        # live docs on :8000 and slides on :8001
+docs-build       # static docs to ./result-docs; open index.html from disk
+devenv up        # live docs on :8981 and slides on :8982
 ```

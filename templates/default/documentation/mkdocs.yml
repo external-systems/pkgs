@@ -1,5 +1,13 @@
 site_name: CHANGE ME
 
+# Live preview port (devenv `docs` script / `devenv up`); 8000 is left
+# to the apps themselves.
+dev_addr: 127.0.0.1:8981
+
+# Page links as page.html instead of page/, so the static build browses
+# straight from disk: firefox result-docs/index.html
+use_directory_urls: false
+
 nav:
   - Home: index.md
 
@@ -22,6 +30,8 @@ theme:
 
 plugins:
   - search
+  # Makes search (and the rest of the site) work from file://.
+  - offline
 
 markdown_extensions:
   - admonition

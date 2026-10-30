@@ -25,13 +25,22 @@
       exec = ''nix run .#sync-locks'';
       description = "Pin dev/flake.lock and devenv.lock to the flake.lock nixpkgs";
     };
+    # Static build: no server, open result-docs/index.html straight
+    # from disk (file://) in any browser.
+    docs-build = {
+      exec = ''nix build .#documentation -o result-docs "$@" && echo "$PWD/result-docs/index.html"'';
+      description = "Build the docs site (slides embedded at slides/) to ./result-docs";
+    };
+    # Live previews. Ports 8981/8982 stay clear of the 8000/8001 that
+    # app dev servers usually take; the docs port is dev_addr in
+    # documentation/mkdocs.yml.
     docs = {
       exec = ''nix run .#watch-documentation'';
-      description = "Live docs preview on 127.0.0.1:8000";
+      description = "Live docs preview on 127.0.0.1:8981";
     };
     slides = {
-      exec = ''nix run .#serve-slides -- 8001'';
-      description = "Live slides preview on 127.0.0.1:8001";
+      exec = ''nix run .#serve-slides -- 8982'';
+      description = "Live slides preview on 127.0.0.1:8982";
     };
   };
 

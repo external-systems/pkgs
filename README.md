@@ -129,7 +129,9 @@ fmt                    # treefmt: alejandra, deadnix, nixf-diagnose,
 check                  # nix flake check: treefmt, lock-sync, docs and
                        # slides, per-minor k8s parity, manifest
                        # freshness, cilium airgap completeness
-devenv up              # live docs :8000 and slides :8001
+docs-build             # static docs to ./result-docs (nix build
+                       # .#documentation); open index.html from disk
+devenv up              # live docs :8981 and slides :8982
 ```
 
 `git add` new files before evaluating — Nix reads the git tree. This repo is

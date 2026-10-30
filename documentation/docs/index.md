@@ -9,6 +9,6 @@ the shared pieces every external-systems repo builds on.
 - **Org flake standard**: the flake modules, devenv shell and template every
   repo uses. See [Org flake standard](flake-standard.md).
 
-<iframe src="../slides/index.html" title="Slide deck"
+<iframe src="slides/index.html" title="Slide deck"
   style="width: 100%; aspect-ratio: 16 / 9; border: 0;"
   allowfullscreen></iframe>

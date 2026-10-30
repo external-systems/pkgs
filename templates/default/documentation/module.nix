@@ -1,5 +1,6 @@
 # MkDocs documentation site + reveal.js slides.
-# Build: nix flake check (checks.documentation / checks.slides)
+# Build: nix build .#documentation / .#slides (or `docs-build`), then
+#        open result/index.html in a browser; no server needed
 # Preview: devenv up, or the `docs` / `slides` devenv scripts
 {inputs, ...}: {
   imports = [inputs.presenting.flakeModules.default];

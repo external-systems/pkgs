@@ -55,6 +55,11 @@ in {
     pkgs,
     ...
   }: let
+    docs =
+      lib.getAttrs
+      (lib.intersectLists ["documentation" "slides"] (lib.attrNames config.packages))
+      config.packages;
+
     sync-locks = pkgs.writeShellApplication {
       name = "sync-locks";
       runtimeInputs = [pkgs.git pkgs.gnused];
@@ -101,10 +106,13 @@ in {
         );
       }
       # Docs and slides build on every flake check (mkdocs strict mode
-      # fails on broken links), also in repos whose packages stay at the
-      # root and so never expose them as packages.
-      // lib.getAttrs
-      (lib.intersectLists ["documentation" "slides"] (lib.attrNames config.packages))
-      config.packages;
+      # fails on broken links).
+      // docs;
+
+    # `nix build .#documentation` / `.#slides`: nix falls back from
+    # packages to legacyPackages, and the consumer's flake.nix partitions
+    # legacyPackages to dev, so packages stay at the root and consumers
+    # never fetch the docs inputs.
+    legacyPackages = docs;
   };
 }
