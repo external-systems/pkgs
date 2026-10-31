@@ -10,10 +10,13 @@
       enable = true;
       no-lambda-pattern-names = true;
     };
+    # Every nixf diagnostic, the same set nixd (the Nix language server)
+    # shows in editors, so `nix fmt` fails on what VS Code underlines.
+    # Report only: nixf's fixes rename or delete code, so a person
+    # applies them.
     nixf-diagnose = {
       enable = true;
       autoFix = false;
-      only = "sema-primop-removed-prefix";
     };
     shellcheck.enable = true;
     sizelint.enable = true;
