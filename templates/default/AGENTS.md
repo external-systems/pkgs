@@ -8,6 +8,7 @@ CHANGE ME: one paragraph on what this repo is.
 - `dev/flake.nix` + `dev/flake.lock`: dev-only inputs. `dev/flake-module.nix`: the dev partition (formatter, checks, apps, docs).
 - `devenv.yaml` + `devenv.lock` + `devenv.nix`: the dev shell. The org shell comes from external-systems/pkgs (`org-pkgs/devenv` in devenv.yaml).
 - `documentation/`: MkDocs site (`docs/`) and reveal.js deck (`slides/`).
+- `.vscode/`: nixd (Nix language server) settings, resolved from this flake's own inputs and `debug` options; nixd and alejandra come from the devenv shell.
 
 ## Tool loop
 - The shell is devenv. If `DEVENV_ROOT` is unset, run commands with `devenv shell -- <cmd>`.

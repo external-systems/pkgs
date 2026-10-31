@@ -7,9 +7,14 @@
   pkgs,
   ...
 }: {
+  # nixd and alejandra back the editor: .vscode/settings.json runs nixd
+  # (Nix language server, the nixf diagnostics CI enforces) and formats
+  # with alejandra.
   packages = with pkgs; [
+    alejandra
     git
     jq
+    nixd
   ];
 
   scripts = {
