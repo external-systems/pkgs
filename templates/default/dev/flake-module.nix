@@ -3,6 +3,6 @@
 {inputs, ...}: {
   imports = [
     inputs.org-pkgs.flakeModules.dev
-    ../documentation/module.nix
+    ../documentation/flake-module.nix
   ];
 }

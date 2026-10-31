@@ -4,6 +4,6 @@ _: {
   # By path, not self.flakeModules.dev: reading self here would recurse.
   imports = [
     ../flakeModules/dev.nix
-    ../documentation/module.nix
+    ../documentation/flake-module.nix
   ];
 }

@@ -12,7 +12,7 @@ dev/flake-module.nix        imports inputs.org-pkgs.flakeModules.dev + docs
 devenv.yaml / devenv.lock   org-pkgs input (this repo), nixpkgs follows
                             org-pkgs/nixpkgs, imports org-pkgs/devenv
 devenv.nix                  this repo's languages, services, processes
-documentation/              mkdocs.yml, docs/, slides/, module.nix
+documentation/              mkdocs.yml, docs/, slides/, flake-module.nix
 ```
 
 Start a repo from the template:

@@ -7,7 +7,13 @@
   pkgs,
   ...
 }: {
+  # Editor tooling for .vscode/settings.json. languages.nix brings nixd
+  # (the language server; nixf diagnostics, the same rules CI runs),
+  # statix and deadnix; alejandra is the formatter nixd calls.
+  languages.nix.enable = true;
+
   packages = with pkgs; [
+    alejandra
     git
     jq
   ];
