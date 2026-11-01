@@ -12,6 +12,18 @@
   # statix and deadnix; alejandra is the formatter nixd calls.
   languages.nix.enable = true;
 
+  # Stop gh (and other termenv tools) asking the terminal for its
+  # background colour. devenv 2.3+ runs the shell inside its own PTY
+  # (status line, auto-reload): it answers the cursor-position query
+  # (CSI 6n) itself but forwards the OSC 11 colour query to the real
+  # terminal, so the reply comes back second. termenv reads the cursor
+  # reply first, decides OSC 11 is unsupported and leaves the late
+  # `ESC ] 11;rgb:…` reply in the input: it prints as garbage, breaks
+  # the next gh prompt ("unexpected escape sequence") and lands at the
+  # shell prompt. gh skips the query when GLAMOUR_STYLE is set to a
+  # real style; "dark" matches every org terminal.
+  env.GLAMOUR_STYLE = "dark";
+
   packages = with pkgs; [
     alejandra
     git
