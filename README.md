@@ -15,6 +15,10 @@ clan-rendered CoreDNS), and the go-httpbin test fixture. Everything day-2
 (Envoy Gateway, cert-manager, Flux, external-dns, Multus, Sealed Secrets) is
 GitOps-owned (SPEC §3.3) and no longer carried here.
 
+Outside that contract, the repo also builds the workstation and agent tooling
+the fleet flakes (external-systems/home) used to build themselves: the
+`overlays.tools` packages and the code-agent sandbox image (see below).
+
 ## Consuming
 
 ```nix
@@ -25,8 +29,9 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
 - **Packages** — `packages.<system>.<name>` for direct builds on
   `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
-- **Overlays** — `overlays.default` composes the Kubernetes and IfState
-  artifact overlays; `overlays.kubernetes` and `overlays.ifstate` are also
+- **Overlays** — `overlays.default` composes the Kubernetes, IfState and
+  tools overlays; `overlays.kubernetes`, `overlays.ifstate` and
+  `overlays.tools` are also
   exported separately. Applying the default overlay gives you the pinned
   artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`. The builder
   expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
@@ -149,3 +154,36 @@ and `templates.default`. Start a repo with
 `nix flake init -t github:external-systems/pkgs`. The full description is in
 the docs site (`documentation/docs/flake-standard.md`) and the `nix-style`
 skill (external-systems/skills).
+
+## Tools overlay
+
+`overlays.tools` (also in `overlays.default`, and as `packages.<system>.*`
+where the platform is supported) carries the repo-built CLIs and agent
+tooling. Each source is pinned in its own `pkgs/<name>/package.nix`, so the
+overlay adds no flake input to consumers' locks.
+
+| Package | What |
+|---|---|
+| `headroom`, `headroom-slim` | Context compression proxy + MCP server for AI agents (x86_64 wheel) |
+| `kimi-code` | Moonshot's Kimi Code CLI, from source (ported from numtide/llm-agents.nix) |
+| `artifacthub-mcp` | MCP server for Artifact Hub (Helm charts) |
+| `kubernetes-mcp-server` | MCP server for Kubernetes and OpenShift |
+| `longhornctl` | Longhorn CLI (release binary, x86_64) |
+| `hcloud-ip` | Hetzner Cloud floating IP CLI (release binary, x86_64) |
+
+`claude-code`, `pi-coding-agent`, `tfctl`, `devenv`, `mcp-nixos` and
+`github-mcp-server` come straight from nixpkgs.
+
+## code-agent image
+
+The OpenShell code-agent sandbox image (agent CLIs, nix, the skills tree from
+external-systems/skills, home-manager-generated dotfiles) lives in the dev
+partition (`images/code-agent/`), so its inputs (external-systems/modules,
+which brings home-manager and skills) are locked only in `dev/flake.lock`.
+
+```sh
+nix build .#code-agent-image                 # streamed docker-archive script
+nix run .#load-code-agent-image              # docker load
+nix run .#push-code-agent-image -- docker://ghcr.io/<org>/code-agent:<tag>
+```
+

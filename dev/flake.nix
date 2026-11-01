@@ -19,6 +19,15 @@
       # dev-nixpkgs so the dev lock holds a single nixpkgs.
       inputs.org-pkgs.inputs.nixpkgs.follows = "dev-nixpkgs";
     };
+
+    # The code-agent image (images/code-agent): the home-manager agent
+    # modules, home-manager itself and external-systems/skills all come
+    # through modules. modules follows an older revision of this flake;
+    # pin that copy's nixpkgs to dev-nixpkgs as well.
+    modules = {
+      url = "github:external-systems/modules";
+      inputs.org-pkgs.inputs.nixpkgs.follows = "dev-nixpkgs";
+    };
   };
 
   outputs = _: {};
