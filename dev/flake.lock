@@ -269,11 +269,11 @@
         "whisper-dictation": "whisper-dictation"
       },
       "locked": {
-        "lastModified": 1793453908,
-        "narHash": "sha256-mL2s1xF68Cn+IoP8m93Rb57weNeeGIco9GrWssGIovQ=",
+        "lastModified": 1793587206,
+        "narHash": "sha256-vARbzxL8CxegCKycqEyGlROVzL8LZMLbmCg5/hthyX8=",
         "owner": "external-systems",
         "repo": "modules",
-        "rev": "d592f4d61dafd078595b8be40c4bfb448f8edd43",
+        "rev": "68626d7944e056250414ece21ca845200f234796",
         "type": "github"
       },
       "original": {
@@ -344,22 +344,6 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1759036355,
-        "narHash": "sha256-0m27AKv6ka+q270dw48KflE0LwQYrO7Fm4/2//KCVWg=",
-        "owner": "nixos",
-        "repo": "nixpkgs",
-        "rev": "e9f00bd893984bc8ce46c895c3bf7cac95331127",
-        "type": "github"
-      },
-      "original": {
-        "owner": "nixos",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "org-pkgs": {
       "inputs": {
         "flake-parts": "flake-parts",
@@ -369,11 +353,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1793444658,
-        "narHash": "sha256-Fk+uJAmFS0FbZqH48EoqRifwiJM1Z1TlfX5f4hZS4/M=",
+        "lastModified": 1793551278,
+        "narHash": "sha256-7seV8b4LiNozjcmFL+QVW8AZJy7YcaaxGBLXQSsL6u8=",
         "owner": "external-systems",
         "repo": "pkgs",
-        "rev": "e058d99fe9f04de4fc47ce892d0efbfebba7929b",
+        "rev": "eda36b1fe7d4ea04b6ac6f3b66a6643a2b2bab74",
         "type": "github"
       },
       "original": {
@@ -477,11 +461,11 @@
         "reveal-js": "reveal-js"
       },
       "locked": {
-        "lastModified": 1793447949,
-        "narHash": "sha256-X4GCW7OswyceP9rf/9nu+bLDj9bwtSnMxejp/V1M3n4=",
+        "lastModified": 1793453920,
+        "narHash": "sha256-NPjWRnrPSJfSTHXLo7iCJOMTaanjpBLwazdhksGygIE=",
         "owner": "external-systems",
         "repo": "presenting",
-        "rev": "5b1b5aef1c53c60c9a6e79b1095b9fcdeca022d1",
+        "rev": "91b03e751f0ef4c479054361d2e7b18e6707611b",
         "type": "github"
       },
       "original": {
@@ -598,11 +582,11 @@
         "skills-terraform": "skills-terraform"
       },
       "locked": {
-        "lastModified": 1793404447,
-        "narHash": "sha256-gxL13x7AHaCsD+uKCgM9+1iBIdVqb3aCdhLB9AalD6M=",
+        "lastModified": 1793569523,
+        "narHash": "sha256-Wp8P3j6C1vEhlKgrXq5yLazaOVyf8S/O+4Lyh9WhjfM=",
         "owner": "external-systems",
         "repo": "skills",
-        "rev": "f9a30090cbf5f36f37c273458516cd80677fc412",
+        "rev": "cfc633dedd8cd66daba3f89c377a63cfa5d136d5",
         "type": "github"
       },
       "original": {
@@ -874,7 +858,10 @@
     "whisper-dictation": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs_2"
+        "nixpkgs": [
+          "modules",
+          "nixpkgs"
+        ]
       },
       "locked": {
         "lastModified": 1785743674,

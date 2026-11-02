@@ -12,6 +12,18 @@
     };
 
     import-tree.url = "github:denful/import-tree";
+
+    # ------ Third-party flakes (overlays.third-party) ------ #
+    # Packages that only ship as flakes. Lazy: a consumer that never reads
+    # pkgs.zen-browser / pkgs.moscripts never fetches them.
+    zen-browser = {
+      url = "github:youwen5/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    moscripts = {
+      url = "https://flakehub.com/f/andrewthomaslee/moscripts/*";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
