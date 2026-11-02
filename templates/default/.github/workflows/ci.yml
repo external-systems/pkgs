@@ -1,0 +1,55 @@
+# Org standard CI: nix flake check on PRs, the merge queue and main; on
+# main, deploy the docs/slides site to GitHub Pages and tag a release.
+# The workflows live in external-systems/pkgs; see its docs page "CI".
+#
+# Required status check for the ruleset: "check / flake-check".
+#
+# Private flake inputs (e.g. external-systems/secrets): add a
+# NIX_GITHUB_TOKEN repository secret, or NIX_APP_ID + NIX_APP_PRIVATE_KEY
+# and `with: {private-repos: secrets}` on check and pages.
+# No docs? Delete the pages job.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+# PRs: a new push cancels the older run. main: runs queue, so every
+# push's cache save, deploy and release finishes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  check:
+    uses: external-systems/pkgs/.github/workflows/flake-check.yml@main
+    permissions:
+      contents: read
+      # cache-nix-action purges main's superseded store caches.
+      actions: write
+    secrets: inherit
+
+  pages:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: external-systems/pkgs/.github/workflows/pages.yml@main
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    secrets: inherit
+
+  release:
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    uses: external-systems/pkgs/.github/workflows/release.yml@main
+    permissions:
+      contents: write
+    with:
+      # 0.<minor>.<commits since the first commit>
+      minor: 0

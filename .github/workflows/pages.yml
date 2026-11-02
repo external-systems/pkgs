@@ -1,0 +1,105 @@
+# Org reusable workflow: build the MkDocs site + reveal.js deck (the
+# external-systems/presenting flake modules, `.#documentation`, deck at
+# /slides/) and deploy it to GitHub Pages.
+#
+# Caller (see templates/default/.github/workflows/ci.yml):
+#
+#   pages:
+#     needs: check
+#     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+#     uses: external-systems/pkgs/.github/workflows/pages.yml@main
+#     permissions: {contents: read, pages: write, id-token: write}
+#     secrets: inherit
+#
+# Running after `check` means the store cache this restores was just
+# saved by that run, and `nix flake check` already built the docs, so the
+# build is a cache hit.
+#
+# One-time setup: Settings > Pages > Build and deployment > Source:
+# "GitHub Actions".
+name: pages
+
+on:
+  workflow_call:
+    inputs:
+      attribute:
+        description: Flake attribute holding the built site.
+        type: string
+        default: documentation
+      private-repos:
+        description: See flake-check.yml.
+        type: string
+        default: ""
+      cachix-name:
+        type: string
+        default: ""
+    secrets:
+      NIX_GITHUB_TOKEN:
+        required: false
+      NIX_APP_ID:
+        required: false
+      NIX_APP_PRIVATE_KEY:
+        required: false
+    outputs:
+      page_url:
+        value: ${{ jobs.deploy.outputs.page_url }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      HAS_APP: ${{ secrets.NIX_APP_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
+      HAS_CACHIX: ${{ inputs.cachix-name != '' }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: app-token
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.NIX_APP_ID }}
+          private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ inputs.private-repos }}
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ steps.app-token.outputs.token || secrets.NIX_GITHUB_TOKEN || github.token }}
+      - if: env.HAS_CACHIX == 'true'
+        uses: cachix/cachix-action@v16
+        with:
+          name: ${{ inputs.cachix-name }}
+          skipPush: true
+      # Read-only: same key scheme as flake-check.yml, which owns saving.
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-${{ hashFiles('**/*.nix') }}
+          restore-prefixes-first-match: |
+            nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-
+            nix-${{ runner.os }}-${{ runner.arch }}-
+          save: false
+      - name: Build the site
+        run: |
+          nix build ".#${{ inputs.attribute }}" --print-build-logs
+          # Copy out of the read-only Nix store for the Pages upload.
+          cp -rL result _site
+          chmod -R u+w _site
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # One deployment at a time; never cancel one that is publishing.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
