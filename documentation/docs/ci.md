@@ -9,6 +9,13 @@ Every external-systems repo runs the same CI, defined once here in
 | `pages.yml` | pushes to `main`, after the check | Builds `.#documentation` (MkDocs + reveal.js deck at `/slides/`, from the external-systems/presenting modules) and deploys it to GitHub Pages. |
 | `release.yml` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
+Only `flake-check` runs on PRs, other branches and the merge queue.
+`pages` and `release` run only for pushes to the default branch and only
+after `check / flake-check` passed: the caller's `needs: check` gives the
+order, and both reusable workflows also refuse any other event or branch
+themselves, so a caller that drops its `if:` still can't deploy or tag
+from a PR.
+
 ## Adopting it in a repo
 
 1. Copy `templates/default/.github/workflows/ci.yml` (new repos from

@@ -33,7 +33,8 @@ jobs:
 
   pages:
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Default-branch pushes only, after the check passed.
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     uses: ./.github/workflows/pages.yml
     permissions:
       contents: read
@@ -43,7 +44,8 @@ jobs:
 
   release:
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Default-branch pushes only, after the check passed.
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     uses: ./.github/workflows/release.yml
     permissions:
       contents: write
