@@ -81,9 +81,11 @@ module merging in clanServices), never re-run helm values here.
 |---|---|
 | `manifests/cilium/1.20.3.yaml` | Cilium 1.20.3, canonical profile (`pkgs/cilium/values.nix`): KPR, native routing, multi-pool IPAM, auto-direct-node-routes off, Cilium iptables rules off, BPF masquerade+tproxy, Maglev, pmtu, dual-stack, clustermesh-apiserver, Gateway/Ingress off (D1) |
 
-The committed manifest is guarded by `checks.manifest-cilium-freshness`: the
-committed file must be byte-identical to a fresh render of the pin. This is
-the artifact-side publish-freshness gate (D26/D40).
+The committed manifest is regenerated with `nix run .#update-manifests`. It
+has no freshness check for now: the chart generates its Hubble and
+clustermesh TLS Secrets on every render, so a fresh render never matches the
+committed file. Those certs are replaced by the clanServices Kubernetes
+services and are never used.
 
 ## Images and airgap
 
@@ -135,8 +137,8 @@ devenv allow           # auto-activation (after `devenv hook`)
 fmt                    # treefmt: alejandra, deadnix, nixf-diagnose,
                        # shellcheck, sizelint, statix
 check                  # nix flake check: treefmt, lock-sync, docs and
-                       # slides, per-minor k8s parity, manifest
-                       # freshness, cilium airgap completeness
+                       # slides, per-minor k8s parity, cilium
+                       # airgap completeness
 docs-build             # static docs to ./result-docs (nix build
                        # .#documentation); open index.html from disk
 devenv up              # live docs :8981 and slides :8982

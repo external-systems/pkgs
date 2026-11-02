@@ -11,6 +11,7 @@ use_directory_urls: false
 nav:
   - Home: index.md
   - Org flake standard: flake-standard.md
+  - CI: ci.md
 
 theme:
   name: material

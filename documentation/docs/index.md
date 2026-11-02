@@ -8,6 +8,8 @@ the shared pieces every external-systems repo builds on.
   matrix, committed manifests and update apps.
 - **Org flake standard**: the flake modules, devenv shell and template every
   repo uses. See [Org flake standard](flake-standard.md).
+- **CI**: the reusable GitHub workflows (flake check, docs deploy,
+  tagged releases) every repo calls. See [CI](ci.md).
 
 <iframe src="slides/index.html" title="Slide deck"
   style="width: 100%; aspect-ratio: 16 / 9; border: 0;"

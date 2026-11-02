@@ -1,0 +1,54 @@
+# pkgs' own CI, built from the org reusable workflows in this directory.
+# Other repos call the same workflows by full path
+# (external-systems/pkgs/.github/workflows/<name>.yml@main); copy
+# templates/default/.github/workflows/ci.yml. pkgs calls them by local
+# path so a PR that changes a workflow is tested by that change.
+#
+# Required status check for the ruleset: "check / flake-check".
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+  workflow_dispatch:
+
+# PRs: a new push cancels the older run. main: runs queue, so every
+# push's cache save, deploy and release finishes.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions: {}
+
+jobs:
+  check:
+    uses: ./.github/workflows/flake-check.yml
+    permissions:
+      contents: read
+      # cache-nix-action purges main's superseded store caches.
+      actions: write
+    secrets: inherit
+
+  pages:
+    needs: check
+    # Default-branch pushes only, after the check passed.
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: ./.github/workflows/pages.yml
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    secrets: inherit
+
+  release:
+    needs: check
+    # Default-branch pushes only, after the check passed.
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    uses: ./.github/workflows/release.yml
+    permissions:
+      contents: write
+    with:
+      # 0.<minor>.<commits since the first commit>
+      minor: 0

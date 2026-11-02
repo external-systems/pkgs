@@ -1,0 +1,84 @@
+# Org reusable workflow: tag and publish a GitHub release for the pushed
+# commit as <major>.<minor>.<commits>:
+#   - major: 0 (pre-1.0, rolling).
+#   - minor: the rolling release series, set by the caller. Bump it by
+#     hand when you start a new series (for example a breaking change).
+#   - patch: `git rev-list --count HEAD`, the number of commits on main
+#     since the first commit. It only grows, because the ruleset forbids
+#     force-pushes to main.
+#
+# Caller (see templates/default/.github/workflows/ci.yml):
+#
+#   release:
+#     needs: check
+#     if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+#     uses: external-systems/pkgs/.github/workflows/release.yml@main
+#     permissions: {contents: write}
+#     with: {minor: 0}
+#
+# Re-running is safe: an existing tag is left alone. Tags created with
+# GITHUB_TOKEN do not trigger other workflows.
+name: release
+
+on:
+  workflow_call:
+    inputs:
+      major:
+        type: number
+        default: 0
+      minor:
+        type: number
+        default: 0
+      prefix:
+        description: Tag prefix, e.g. "v". Empty gives bare 0.x.y tags.
+        type: string
+        default: ""
+    outputs:
+      version:
+        value: ${{ jobs.release.outputs.version }}
+      tag:
+        value: ${{ jobs.release.outputs.tag }}
+
+jobs:
+  release:
+    # Only for pushes to the default branch, whatever the caller does.
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Releases in commit order; never cancel one mid-publish.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history: the patch number is the commit count.
+          fetch-depth: 0
+          fetch-tags: true
+      - id: version
+        env:
+          MAJOR: ${{ inputs.major }}
+          MINOR: ${{ inputs.minor }}
+          PREFIX: ${{ inputs.prefix }}
+        run: |
+          version="${MAJOR}.${MINOR}.$(git rev-list --count HEAD)"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+          echo "tag=${PREFIX}${version}" >> "$GITHUB_OUTPUT"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists; nothing to do."
+            exit 0
+          fi
+          gh release create "${TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TAG}" \
+            --generate-notes \
+            --latest
