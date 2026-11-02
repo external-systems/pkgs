@@ -10,13 +10,69 @@
 {
   lib,
   fetchurl,
+  fetchPypi,
+  uv,
   autoPatchelfHook,
   stdenv,
   python313Packages,
   slim ? false,
 }: let
-  py = python313Packages;
-  version = "0.40.0";
+  py = python313Packages.overrideScope (final: previous: {
+    # Headroom 0.42 requires filelock>=4.2.1.
+    filelock = previous.filelock.overrideAttrs (finalAttrs: previousAttrs: {
+      version = "4.2.6";
+      src = fetchPypi {
+        pname = "filelock";
+        inherit (finalAttrs) version;
+        hash = "sha256-7nr47eNtyvEuEBbZ98OmPs1Ul9RvhdqyG4x3m4+UTpc=";
+      };
+      nativeBuildInputs = previousAttrs.nativeBuildInputs ++ [final.hatch-fancy-pypi-readme];
+    });
+    # Build-only virtualenv still requires filelock 3.x.
+    inherit (python313Packages) virtualenv;
+
+    # Rich 15 omits the filename from the error panel expected by this test.
+    typer = previous.typer.overrideAttrs (_: {
+      disabledTests = ["test_file_error"];
+    });
+
+    # Headroom requires the MCP 1.x low-level server API, which MCP 2.x removed.
+    mcp = previous.mcp.overrideAttrs (finalAttrs: previousAttrs: {
+      version = "1.30.0";
+      src = fetchPypi {
+        pname = "mcp";
+        inherit (finalAttrs) version;
+        hash = "sha256-RFQUYl/OXClfqlBbsRus7OZhq29AKNV8k121eCC3o+Q=";
+      };
+      dependencies = with final;
+        [
+          anyio
+          httpx-sse
+          httpx
+          jsonschema
+          pydantic-settings
+          pydantic
+          pyjwt
+          python-multipart
+          sse-starlette
+          starlette
+          typing-extensions
+          typing-inspection
+          uvicorn
+        ]
+        ++ pyjwt.optional-dependencies.crypto;
+      propagatedBuildInputs = finalAttrs.dependencies ++ [final.python];
+      nativeCheckInputs = previousAttrs.nativeCheckInputs ++ [uv final.websockets];
+      nativeBuildInputs = previousAttrs.nativeBuildInputs ++ [uv final.websockets];
+      disabledTests =
+        previousAttrs.disabledTests
+        ++ [
+          "test_command_execution"
+          "test_lifespan_cleanup_executed"
+        ];
+    });
+  });
+  version = "0.42.0";
 
   # headroom-ai core + proxy + code + mcp.
   slimDeps = with py; [
@@ -32,6 +88,8 @@
     tomlkit
     # truststore joined core in headroom 0.38.
     truststore
+    hf-xet
+    filelock
     # proxy
     fastapi
     uvicorn
@@ -53,7 +111,7 @@
   ];
 
   # headroom-ai[all] on top of the slim set: ml, memory, relevance, image,
-  # reports, otel, evals, html, spreadsheet.
+  # reports, otel, evals, html, spreadsheet, voice.
   fullDeps =
     slimDeps
     ++ (with py; [
@@ -89,8 +147,8 @@ in
     # fetchurl keeps the real PyPI file name, which the wheel install
     # hook needs (it globs dist/*.whl).
     src = fetchurl {
-      url = "https://files.pythonhosted.org/packages/03/1c/383f4a2d33ad18d40869037ca6221e1db24bc4da5e92befe70793220b138/headroom_ai-${version}-cp310-abi3-manylinux_2_28_x86_64.whl";
-      hash = "sha256-SbbYoByOzrW56aZ1cg7V5Msk5GcoJkJlOqx/L9j69H8=";
+      url = "https://files.pythonhosted.org/packages/82/76/34c9b66a878b7ce69aa27761c41f341a8863945f2a681f8d2920c778c3d7/headroom_ai-${version}-cp310-abi3-manylinux_2_28_x86_64.whl";
+      hash = "sha256-+7POuPbD8gjtzDqtQ8DgPg20VjbZ0gYVJa0NChZtoUY=";
     };
 
     nativeBuildInputs = [autoPatchelfHook];
