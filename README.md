@@ -29,9 +29,11 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
 - **Packages** — `packages.<system>.<name>` for direct builds on
   `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
-- **Overlays** — `overlays.default` composes the Kubernetes, IfState and
-  tools overlays; `overlays.kubernetes`, `overlays.ifstate` and
-  `overlays.tools` are also
+- **Overlays** — `overlays.default` composes the Kubernetes, IfState,
+  tools and third-party overlays; `overlays.kubernetes`, `overlays.ifstate`,
+  `overlays.tools` and `overlays.third-party` (`zen-browser` and
+  `moscripts`, taken from their own flakes, which are this flake's only
+  non-core inputs) are also
   exported separately. Applying the default overlay gives you the pinned
   artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`. The builder
   expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
