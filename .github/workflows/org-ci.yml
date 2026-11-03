@@ -9,7 +9,7 @@
 #   deploy       main pushes, after flake-check: deploy that artifact to
 #                GitHub Pages.
 #   release      main pushes, after flake-check: tag and release
-#                0.<minor>.<commits since the first commit>.
+#                <major>.<minor>.<commits since the first commit>.
 #
 # The caller is templates/default/.github/workflows/ci.yml:
 #
@@ -17,7 +17,7 @@
 #     ci:
 #       uses: external-systems/pkgs/.github/workflows/org-ci.yml@main
 #       permissions: {contents: write, actions: write, pages: write, id-token: write}
-#       with: {minor: 0}
+#       with: {major: 0, minor: 0}
 #       secrets: inherit
 #
 # Required status check for the ruleset: "ci / flake-check" (caller job
@@ -30,22 +30,27 @@
 # skipped: a skipped required check counts as passing). Never call this
 # from pull_request_target.
 #
-# Private flake inputs: NIX_APP_ID + NIX_APP_PRIVATE_KEY (GitHub App,
-# with `private-repos`), or a NIX_GITHUB_TOKEN PAT, as org or repo
-# secrets. See documentation/docs/ci.md.
+# Private flake inputs: the GitHub App's Client ID as the variable
+# NIX_APP_CLIENT_ID plus the secret NIX_APP_PRIVATE_KEY (with
+# `private-repos`), or a NIX_GITHUB_TOKEN PAT secret, on the org or the
+# repo. See documentation/docs/ci.md.
 name: org-ci
 
 on:
   workflow_call:
     inputs:
+      major:
+        description: Major version w in w.x.y (semver). Bump by hand for a breaking release.
+        type: number
+        default: 0
       minor:
-        description: Release series x in 0.x.y. Bump by hand to start a new series.
+        description: Release series x in w.x.y. Bump by hand to start a new series.
         type: number
         default: 0
       private-repos:
         description: >-
           Comma-separated repos (no owner) the GitHub App token may read,
-          e.g. "secrets". Used only with NIX_APP_ID / NIX_APP_PRIVATE_KEY.
+          e.g. "secrets". Used only with NIX_APP_CLIENT_ID / NIX_APP_PRIVATE_KEY.
         type: string
         default: ""
       cachix-name:
@@ -68,10 +73,11 @@ on:
         type: number
         default: 90
     secrets:
-      NIX_APP_ID:
-        description: GitHub App id; with NIX_APP_PRIVATE_KEY mints a one-hour token for private-repos.
-        required: false
       NIX_APP_PRIVATE_KEY:
+        description: >-
+          GitHub App private key; with the NIX_APP_CLIENT_ID variable
+          (not a secret: the Client ID is public) mints a one-hour token
+          for private-repos.
         required: false
       NIX_GITHUB_TOKEN:
         description: Fallback fine-grained PAT with read-only Contents on the private input repos.
@@ -98,7 +104,7 @@ jobs:
       group: flake-check-${{ github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
-      HAS_APP: ${{ secrets.NIX_APP_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
+      HAS_APP: ${{ vars.NIX_APP_CLIENT_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
       HAS_CACHIX: ${{ inputs.cachix-name != '' }}
       MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     steps:
@@ -119,7 +125,9 @@ jobs:
         if: env.HAS_APP == 'true'
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.NIX_APP_ID }}
+          # The caller's org/repo variable: in a reusable workflow, `vars`
+          # resolves against the calling repository.
+          client-id: ${{ vars.NIX_APP_CLIENT_ID }}
           private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.private-repos }}
@@ -204,7 +212,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 
-  # Tag <0>.<minor>.<git rev-list --count HEAD>: the patch number only
+  # Tag <major>.<minor>.<git rev-list --count HEAD>: the patch number only
   # grows, because the ruleset forbids force-pushes to main. Re-running is
   # safe: an existing tag is left alone. Tags created with GITHUB_TOKEN do
   # not trigger other workflows.
@@ -229,8 +237,9 @@ jobs:
           fetch-tags: true
       - id: version
         env:
+          MAJOR: ${{ inputs.major }}
           MINOR: ${{ inputs.minor }}
-        run: echo "version=0.${MINOR}.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+        run: echo "version=${MAJOR}.${MINOR}.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

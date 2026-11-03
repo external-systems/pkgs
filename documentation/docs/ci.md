@@ -9,7 +9,7 @@ every repo on its next run, with no PR per repo.
 |---|---|---|
 | `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
 | `ci / deploy` | pushes to `main`, after the check | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). |
-| `ci / release` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
+| `ci / release` | pushes to `main`, after the check | Tags `<major>.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
 Only `flake-check` runs on PRs, other branches and the merge queue.
 `deploy` and `release` run only for pushes to the default branch and only
@@ -21,7 +21,7 @@ PR code, never holds `contents: write`, `pages` or `id-token`.
 
 1. Copy `templates/default/.github/workflows/ci.yml` (new repos from
    `nix flake init -t github:external-systems/pkgs` already have it) and
-   set `minor`.
+   set `major` and `minor`.
 2. Delete the repo's old workflows (`check.yml`, `pages.yml`, ...).
 3. Settings → Pages → Source: **GitHub Actions**.
 4. If it has private flake inputs: see
@@ -40,7 +40,9 @@ keeps the actions it uses current, once, for every repo.
 
 The `release` job tags `<major>.<minor>.<patch>`:
 
-- **major** stays `0`.
+- **major** is set by `with: {major: N}` in the caller (default `0`).
+  Bump it by hand for a breaking release, and reset `minor` to `0` in
+  the same change.
 - **minor** is the rolling release series, set by `with: {minor: N}` in
   the caller. Bump it by hand to start a new series.
 - **patch** is `git rev-list --count HEAD`: the number of commits on
@@ -90,8 +92,10 @@ credentials and SSH keys, so the workflows give nix a token as
 
 1. **GitHub App (recommended).** Create an org-owned GitHub App with
    repository permission *Contents: read*, install it on the private repos
-   (e.g. `external-systems/secrets`) only, and add `NIX_APP_ID` and
-   `NIX_APP_PRIVATE_KEY` as secrets. Pass `private-repos: secrets`
+   (e.g. `external-systems/secrets`) only. Add its **Client ID**
+   (`Iv23…`, from the App's settings page) as the *variable*
+   `NIX_APP_CLIENT_ID` (it is not sensitive) and its private key as the
+   secret `NIX_APP_PRIVATE_KEY`. Pass `private-repos: secrets`
    under `with:`. Each run mints a one-hour token scoped to those
    repos; nothing expires or needs rotating.
 2. **Fine-grained PAT.** Resource owner `external-systems`, only the
@@ -100,11 +104,12 @@ credentials and SSH keys, so the workflows give nix a token as
 3. Neither: `github.token`, which is enough for public inputs and lifts
    the anonymous rate limit.
 
-Put the secrets on the **org** (Settings → Secrets and variables →
-Actions → New organization secret → *Selected repositories*: only the
-repos that need them, e.g. `home`) rather than on each repo. The caller's
-`secrets: inherit` passes them through; repos not selected simply don't
-get them.
+Put them on the **org** (Settings → Secrets and variables → Actions)
+rather than on each repo: the secret with *Selected repositories* (only
+the repos that need it, e.g. `home`), the variable on any visibility
+that includes those repos. The caller's `secrets: inherit` passes the
+secret through, and `vars` in the reusable workflow reads the caller's
+variables; a repo without both falls back to the next option.
 
 A **deploy key** is an SSH key, so it only works if the input is written
 `git+ssh://git@github.com/external-systems/secrets` and the job loads the

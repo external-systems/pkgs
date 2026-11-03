@@ -24,5 +24,6 @@ jobs:
       pages: write
       id-token: write
     with:
+      major: 0
       minor: 0
     secrets: inherit
