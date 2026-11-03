@@ -13,6 +13,21 @@
 
     import-tree.url = "github:denful/import-tree";
 
+    # ------ Org flake modules (flakeModules.treefmt / .docs) ------ #
+    # Bound to this flake by flake-parts/flakeModules.nix, so every repo
+    # gets formatting, docs and slides from its one org-pkgs input. Lazy:
+    # a consumer that only reads packages or overlays never fetches them.
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    # reveal.js, source only. Release tags commit the prebuilt `dist/`, so
+    # decks need zero npm. Upgrade: bump the tag, `nix flake update reveal-js`.
+    reveal-js = {
+      url = "github:hakimel/reveal.js?ref=6.0.2";
+      flake = false;
+    };
+
     # ------ Third-party flakes (overlays.third-party) ------ #
     # Packages that only ship as flakes. Lazy: a consumer that never reads
     # pkgs.zen-browser / pkgs.moscripts never fetches them.
@@ -47,7 +62,7 @@
         apps = "dev";
         checks = "dev";
         formatter = "dev";
-        # Docs/slides: `nix build .#documentation` (flakeModules.dev).
+        # Docs/slides: `nix build .#documentation` (flakeModules.docs).
         legacyPackages = "dev";
       };
 

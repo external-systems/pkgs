@@ -6,14 +6,22 @@ its sandbox on, the default) and devenv; nothing else.
 ## Layout
 
 ```
-flake.nix / flake.lock      consumer outputs; inputs follow org-pkgs
-dev/flake.nix / flake.lock  dev partition inputs: treefmt-nix, presenting
-dev/flake-module.nix        imports inputs.org-pkgs.flakeModules.dev + docs
+flake.nix / flake.lock      one org-pkgs input (nixpkgs, flake-parts,
+                            import-tree follow it); imports
+                            inputs.org-pkgs.flakeModules.dev
+flake-parts/                the repo's own modules (import-tree)
 devenv.yaml / devenv.lock   org-pkgs input (this repo), nixpkgs follows
                             org-pkgs/nixpkgs, imports org-pkgs/devenv
 devenv.nix                  this repo's languages, services, processes
-documentation/              mkdocs.yml, docs/, slides/, flake-module.nix
+documentation/              docs/*.md, slides/slides.md; optional
+                            flake-module.nix (docs.* overrides)
 ```
+
+No `dev/flake.nix`, no `dev/flake.lock`, no partition: every dev tool
+(treefmt, MkDocs, reveal.js) comes from pkgs, which every repo already
+locks, so a second lock would protect nobody. pkgs itself is the one
+exception: its code-agent image needs external-systems/modules, which
+depends on pkgs, so that input lives in pkgs' own dev partition.
 
 Start a repo from the template:
 
@@ -26,13 +34,14 @@ nix flake init -t github:external-systems/pkgs
 | Piece | Gives |
 |---|---|
 | `flakeModules.treefmt` | alejandra, deadnix, nixf-diagnose, shellcheck, sizelint, statix as treefmt programs: `formatter`, `checks.treefmt` |
-| `flakeModules.dev` | treefmt, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks and as `legacyPackages` (`nix build .#documentation`) |
+| `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
+| `flakeModules.dev` | treefmt, docs, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
 | `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides` scripts, `devenv up` docs + slides processes, `devenv test` gates |
 | `templates.default` | the whole layout for a new repo |
 
-The flake modules read the importing repo's own `inputs.treefmt-nix` and
-`inputs.presenting` (declared in its `dev/flake.nix`), so pkgs adds nothing
-to anyone's main `flake.lock`.
+The flake modules are bound to pkgs' own `treefmt-nix` and `reveal-js`
+inputs, so a repo declares neither. They add two small nodes to every
+`flake.lock`; Nix fetches them only when formatting or building docs.
 
 ## Daily commands (inside the devenv shell)
 
@@ -43,7 +52,7 @@ to anyone's main `flake.lock`.
 | `docs-build` | `nix build .#documentation -o result-docs`; open `result-docs/index.html` from disk |
 | `devenv up` | live docs on :8981 and slides on :8982 |
 | `devenv test` | treefmt check and lock sync, no VMs |
-| `sync-locks` | after `nix flake update pkgs`: re-pin `dev/flake.lock` and `devenv.lock` |
+| `sync-locks` | after `nix flake update org-pkgs`: re-pin `devenv.lock` |
 
 ## Docs without a server
 
@@ -52,10 +61,6 @@ at `slides/`, and `nix build .#slides` builds the deck alone. Open
 `result/index.html` straight from disk (`firefox result/index.html`,
 `zen result/index.html`). The site uses `use_directory_urls: false` and
 Material's `offline` plugin so links and search work over `file://`.
-These come from `legacyPackages`, partitioned to `dev`, so `packages`
-stay at the root and consumers never fetch docs inputs. A repo whose
-consumers use its `legacyPackages` cannot partition it; there, build
-`.#checks.<system>.documentation` instead.
 
 ## Why the input is `org-pkgs`
 
@@ -65,8 +70,9 @@ else (module arguments, `perSystem`), and devenv passes every `devenv.yaml`
 input to `devenv.nix` as a module argument, so an input named `pkgs`
 replaces nixpkgs' `pkgs` and fails with "attribute 'bash' missing".
 
-## Three lockfiles, one nixpkgs
+## Two lockfiles, one nixpkgs
 
-`flake.lock`, `dev/flake.lock` and `devenv.lock` must resolve nixpkgs to the
-same rev. `checks.lock-sync` fails when they drift and names the fix. The
-bump flow is always `nix flake update pkgs`, then `sync-locks`.
+`flake.lock` and `devenv.lock` must resolve nixpkgs to the same rev (pkgs
+also checks its `dev/flake.lock`). `checks.lock-sync` fails when they
+drift and names the fix. The bump flow is always
+`nix flake update org-pkgs`, then `sync-locks`, in one commit.

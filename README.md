@@ -128,9 +128,9 @@ enforces it).
 
 Needs Nix and devenv. The shell is the devenv CLI (`devenv.yaml` imports the
 org shell from `./devenv`); apps, checks, the formatter, docs and slides live
-in the `dev` flake-parts partition, whose inputs are locked separately in
-`dev/flake.lock`. Consumers of `packages`, `overlays` or `lib` never fetch
-them.
+in the `dev` flake-parts partition. Its one extra input (external-systems/
+modules, for the code-agent image) is locked separately in `dev/flake.lock`,
+so consumers of `packages`, `overlays` or `lib` never fetch it.
 
 ```bash
 devenv allow           # auto-activation (after `devenv hook`)
@@ -153,8 +153,11 @@ committed hash; airgap image sets cover the committed Cilium manifest.
 ## Org flake standard
 
 pkgs also carries what every external-systems repo builds on:
-`flakeModules.treefmt`, `flakeModules.dev`, the org devenv shell (`devenv/`)
-and `templates.default`. Start a repo with
+`flakeModules.treefmt`, `flakeModules.docs` (MkDocs site + reveal.js deck,
+replacing external-systems/presenting), `flakeModules.dev` (both, plus
+lock-sync), the org devenv shell (`devenv/`) and `templates.default`. A repo
+imports `inputs.org-pkgs.flakeModules.dev` and needs no dev inputs of its
+own. Start a repo with
 `nix flake init -t github:external-systems/pkgs`. The full description is in
 the docs site (`documentation/docs/flake-standard.md`) and the `nix-style`
 skill (external-systems/skills).
