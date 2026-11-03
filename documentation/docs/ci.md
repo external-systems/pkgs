@@ -1,43 +1,44 @@
-# CI: org reusable workflows
+# CI: the org workflow
 
-Every external-systems repo runs the same CI, defined once here in
-`.github/workflows/` and called from a short `ci.yml` in each repo.
+Every external-systems repo is a flake with MkDocs + reveal.js docs, so
+every repo runs the same CI: `.github/workflows/org-ci.yml` here, called
+from a ten-line `ci.yml` in each repo. A change to `org-ci.yml` reaches
+every repo on its next run, with no PR per repo.
 
-| Workflow | Runs on | Does |
+| Job | Runs on | Does |
 |---|---|---|
-| `flake-check.yml` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store. Owns the store cache. |
-| `pages.yml` | pushes to `main`, after the check | Deploys the site the check job built (`prebuilt: true`), or builds `.#documentation` (MkDocs + reveal.js deck at `/slides/`, from the external-systems/presenting modules) and deploys it to GitHub Pages. |
-| `release.yml` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
+| `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
+| `ci / deploy` | pushes to `main`, after the check | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). |
+| `ci / release` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
 Only `flake-check` runs on PRs, other branches and the merge queue.
-`pages` and `release` run only for pushes to the default branch and only
-after `check / flake-check` passed: the caller's `needs: check` gives the
-order, and both reusable workflows also refuse any other event or branch
-themselves, so a caller that drops its `if:` still can't deploy or tag
-from a PR.
+`deploy` and `release` run only for pushes to the default branch and only
+after `flake-check` passed. The caller grants the union of the jobs'
+permissions; each job narrows it, so `flake-check`, the only job that runs
+PR code, never holds `contents: write`, `pages` or `id-token`.
 
 ## Adopting it in a repo
 
 1. Copy `templates/default/.github/workflows/ci.yml` (new repos from
-   `nix flake init -t github:external-systems/pkgs` already have it).
-   Delete the `pages` job if the repo has no docs.
-2. Delete the repo's old `check.yml` / `pages.yml`.
-3. If it deploys docs: Settings → Pages → Source: **GitHub Actions**.
-4. If it has private flake inputs: add a token secret, see
+   `nix flake init -t github:external-systems/pkgs` already have it) and
+   set `minor`.
+2. Delete the repo's old workflows (`check.yml`, `pages.yml`, ...).
+3. Settings → Pages → Source: **GitHub Actions**.
+4. If it has private flake inputs: see
    [Private flake inputs](#private-flake-inputs).
-5. Require the status check **`check / flake-check`** in the ruleset, see
+5. Apply the ruleset, which requires **`ci / flake-check`**, see
    [Ruleset](#ruleset).
 
-The status check is named `<caller job id> / <called job id>`. Keep the
-caller job id `check` in every repo so one ruleset fits all of them.
+The status check is named `<caller job id> / <job id>`. Keep the caller
+job id `ci` in every repo so one ruleset fits all of them.
 
-Callers pin `@main`. To pin harder, use a release tag of this repo
-(`@0.0.42`) or a commit SHA, and let Dependabot's `github-actions`
-ecosystem bump it.
+Callers pin `@main`: one maintainer, and every change to `org-ci.yml`
+lands through a PR whose own CI ran it. Dependabot (`.github/dependabot.yml`)
+keeps the actions it uses current, once, for every repo.
 
 ## Versioning
 
-`release.yml` tags `<major>.<minor>.<patch>`:
+The `release` job tags `<major>.<minor>.<patch>`:
 
 - **major** stays `0`.
 - **minor** is the rolling release series, set by `with: {minor: N}` in
@@ -63,11 +64,9 @@ recently used evicted) through `nix-community/cache-nix-action`.
   cache of any lock. Before this, any `.nix` edit fell straight to "newest
   of anything".
 - **The check hands over the site.** `nix flake check` already builds
-  the docs, so on `main` pushes the check job (`pages: true`) runs `nix
-  build .#documentation` (a store hit) and uploads the Pages artifact.
-  `pages` (`prebuilt: true`) then only deploys: no second runner, store
-  restore or evaluation. Without `prebuilt`, `pages` builds it itself
-  after `check`, from the cache `check` just saved.
+  the docs, so `flake-check` runs `nix build .#documentation` (a store
+  hit) and uploads the Pages artifact; `deploy` only deploys. No second
+  runner, store restore or evaluation.
 - **Warm evaluation.** `~/.cache/nix` (unpacked flake inputs and the eval
   cache) is cached with the store, so jobs don't re-extract nixpkgs and
   every other input before evaluating.
@@ -80,7 +79,7 @@ recently used evicted) through `nix-community/cache-nix-action`.
 - **Across repos (optional).** The Actions cache is per repo, so `home`
   rebuilds what `pkgs` already built. A Cachix cache shared by all repos
   fixes that: create one, add `CACHIX_AUTH_TOKEN` as an org secret and
-  pass `with: {cachix-name: <name>}` to `check` and `pages`. `main`
+  pass `cachix-name: <name>` under `with:`. `main`
   pushes; PRs only pull.
 
 ## Private flake inputs
@@ -92,8 +91,8 @@ credentials and SSH keys, so the workflows give nix a token as
 1. **GitHub App (recommended).** Create an org-owned GitHub App with
    repository permission *Contents: read*, install it on the private repos
    (e.g. `external-systems/secrets`) only, and add `NIX_APP_ID` and
-   `NIX_APP_PRIVATE_KEY` as secrets. Pass `with: {private-repos: secrets}`
-   to `check` and `pages`. Each run mints a one-hour token scoped to those
+   `NIX_APP_PRIVATE_KEY` as secrets. Pass `private-repos: secrets`
+   under `with:`. Each run mints a one-hour token scoped to those
    repos; nothing expires or needs rotating.
 2. **Fine-grained PAT.** Resource owner `external-systems`, only the
    private repos selected, *Contents: read-only*. Add it as
@@ -153,7 +152,7 @@ The org-standard branch ruleset for `main`, the one pkgs runs. New repos get it 
         "strict_required_status_checks_policy": true,
         "do_not_enforce_on_create": false,
         "required_status_checks": [
-          { "context": "check / flake-check", "integration_id": 15368 }
+          { "context": "ci / flake-check", "integration_id": 15368 }
         ]
       }
     }
@@ -187,7 +186,7 @@ The repos are public but only you and your bots contribute.
   requests: *Collaborators only*. Anyone can still read and comment, but
   only collaborators with write access can open PRs. (You can also
   disable PRs entirely for mirror-like repos.)
-- **CI fails closed.** `flake-check.yml` fails, not skips, for PR authors
+- **CI fails closed.** `flake-check` fails, not skips, for PR authors
   who aren't the owner, an org member, a collaborator or in
   `trusted-bots`. A skipped required check would count as passing.
 - **Fork PR approval.** Org settings → Actions → General → *Approval for
@@ -197,7 +196,7 @@ The repos are public but only you and your bots contribute.
   **Read repository contents and packages permissions**. The workflows
   grant `actions: write`, `contents: write` or `pages: write` per job.
 - **Only collaborators can merge**, and the ruleset makes every change go
-  through a PR with a green `check / flake-check`.
+  through a PR with a green `ci / flake-check`.
 - **Temporary lockdown.** Org settings → Moderation → Interaction limits
   restricts issues, comments and PRs to collaborators for up to six
   months, e.g. during spam.

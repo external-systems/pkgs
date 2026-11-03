@@ -1,0 +1,248 @@
+# The external-systems org CI: one reusable workflow every repo calls.
+# Every org repo is a flake with MkDocs + reveal.js docs (the
+# external-systems/presenting modules, `.#documentation`), so it is the
+# same three jobs everywhere:
+#
+#   flake-check  PRs, merge queue, main: `nix flake check` with a warm
+#                store; on main pushes it also builds the docs (a store
+#                hit after the check) and uploads the Pages artifact.
+#   deploy       main pushes, after flake-check: deploy that artifact to
+#                GitHub Pages.
+#   release      main pushes, after flake-check: tag and release
+#                0.<minor>.<commits since the first commit>.
+#
+# The caller is templates/default/.github/workflows/ci.yml:
+#
+#   jobs:
+#     ci:
+#       uses: external-systems/pkgs/.github/workflows/org-ci.yml@main
+#       permissions: {contents: write, actions: write, pages: write, id-token: write}
+#       with: {minor: 0}
+#       secrets: inherit
+#
+# Required status check for the ruleset: "ci / flake-check" (caller job
+# id / job id here). Each job narrows the caller's permissions to what it
+# needs; flake-check, the only job that runs PR code, never gets
+# contents: write, pages or id-token.
+#
+# Who can run it: PRs run only for the owner, org members, collaborators
+# and `trusted-bots`. Anyone else's PR FAILS flake-check (it is not
+# skipped: a skipped required check counts as passing). Never call this
+# from pull_request_target.
+#
+# Private flake inputs: NIX_APP_ID + NIX_APP_PRIVATE_KEY (GitHub App,
+# with `private-repos`), or a NIX_GITHUB_TOKEN PAT, as org or repo
+# secrets. See documentation/docs/ci.md.
+name: org-ci
+
+on:
+  workflow_call:
+    inputs:
+      minor:
+        description: Release series x in 0.x.y. Bump by hand to start a new series.
+        type: number
+        default: 0
+      private-repos:
+        description: >-
+          Comma-separated repos (no owner) the GitHub App token may read,
+          e.g. "secrets". Used only with NIX_APP_ID / NIX_APP_PRIVATE_KEY.
+        type: string
+        default: ""
+      cachix-name:
+        description: Optional Cachix cache to pull from (and push to on main).
+        type: string
+        default: ""
+      check-args:
+        description: Arguments for `nix flake check`.
+        type: string
+        default: --keep-going --print-build-logs
+      trusted-bots:
+        description: JSON list of bot logins whose PRs may run the check.
+        type: string
+        default: '["claude[bot]", "dependabot[bot]", "github-actions[bot]"]'
+      gc-max-store-size:
+        description: Store size the cache is GC'd down to before saving.
+        type: string
+        default: 5G
+      timeout-minutes:
+        type: number
+        default: 90
+    secrets:
+      NIX_APP_ID:
+        description: GitHub App id; with NIX_APP_PRIVATE_KEY mints a one-hour token for private-repos.
+        required: false
+      NIX_APP_PRIVATE_KEY:
+        required: false
+      NIX_GITHUB_TOKEN:
+        description: Fallback fine-grained PAT with read-only Contents on the private input repos.
+        required: false
+      CACHIX_AUTH_TOKEN:
+        required: false
+    outputs:
+      page_url:
+        value: ${{ jobs.deploy.outputs.page_url }}
+      version:
+        value: ${{ jobs.release.outputs.version }}
+
+jobs:
+  flake-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    permissions:
+      contents: read
+      # cache-nix-action purges main's superseded store caches.
+      actions: write
+    # PRs: a new push cancels the older run. main: runs queue, so every
+    # push's cache save, deploy and release finishes.
+    concurrency:
+      group: flake-check-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    env:
+      HAS_APP: ${{ secrets.NIX_APP_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
+      HAS_CACHIX: ${{ inputs.cachix-name != '' }}
+      MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+    steps:
+      # Fail closed for untrusted PR authors. merge_group and push events
+      # can only be started by people with write access.
+      - name: Trusted author
+        if: >-
+          github.event_name == 'pull_request' &&
+          !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association) &&
+          !contains(fromJSON(inputs.trusted-bots), github.event.pull_request.user.login)
+        run: |
+          echo "::error::PR author ${{ github.event.pull_request.user.login }} (${{ github.event.pull_request.author_association }}) is not trusted to run CI here."
+          exit 1
+
+      - uses: actions/checkout@v6
+
+      - id: app-token
+        if: env.HAS_APP == 'true'
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.NIX_APP_ID }}
+          private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ inputs.private-repos }}
+
+      # nix fetches github: inputs through the API, which ignores git
+      # credentials, so the token goes in as nix's access-tokens. Without
+      # one, github.token still lifts the anonymous API rate limit.
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            access-tokens = github.com=${{ steps.app-token.outputs.token || secrets.NIX_GITHUB_TOKEN || github.token }}
+
+      - if: env.HAS_CACHIX == 'true'
+        uses: cachix/cachix-action@v16
+        with:
+          name: ${{ inputs.cachix-name }}
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          # Push only from main; PRs and the merge queue just pull.
+          skipPush: ${{ env.MAIN_PUSH != 'true' }}
+
+      # Nix store cache (GitHub Actions cache, 10 GB per repo).
+      #   - Key: <os>-<arch>-<locks>-<nix sources>. On a miss, restore the
+      #     newest cache with the same locks (inputs identical, only local
+      #     code changed), then the newest cache of any lock.
+      #   - Saved only by pushes to main and manual runs. PRs and merge
+      #     groups can read main's cache but would write caches nobody
+      #     else can read, which only evicts main's.
+      #   - GC'd to gc-max-store-size before saving; older main caches are
+      #     purged so one current cache remains.
+      #   - ~/.cache/nix rides along: the fetcher cache (unpacked flake
+      #     inputs) and the eval cache, so evaluation is warm too.
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          paths: ~/.cache/nix
+          primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-${{ hashFiles('**/*.nix') }}
+          restore-prefixes-first-match: |
+            nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-
+            nix-${{ runner.os }}-${{ runner.arch }}-
+          save: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}
+          gc-max-store-size-linux: ${{ inputs.gc-max-store-size }}
+          purge: true
+          purge-prefixes: nix-${{ runner.os }}-${{ runner.arch }}-
+          purge-created: 0
+          purge-primary-key: never
+
+      - name: nix flake check
+        run: nix flake check ${{ inputs.check-args }}
+
+      # The check already built the docs, so this is a store hit. Handing
+      # the artifact to deploy saves a runner, a store restore and an
+      # evaluation.
+      - name: Build the Pages site
+        if: env.MAIN_PUSH == 'true'
+        run: |
+          nix build .#documentation --print-build-logs
+          # Copy out of the read-only Nix store for the Pages upload.
+          cp -rL result _site
+          chmod -R u+w _site
+      - if: env.MAIN_PUSH == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: flake-check
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    # One deployment at a time; never cancel one that is publishing.
+    concurrency:
+      group: pages-deploy
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
+
+  # Tag <0>.<minor>.<git rev-list --count HEAD>: the patch number only
+  # grows, because the ruleset forbids force-pushes to main. Re-running is
+  # safe: an existing tag is left alone. Tags created with GITHUB_TOKEN do
+  # not trigger other workflows.
+  release:
+    needs: flake-check
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    # Releases in commit order; never cancel one mid-publish.
+    concurrency:
+      group: release
+      cancel-in-progress: false
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          # Full history: the patch number is the commit count.
+          fetch-depth: 0
+          fetch-tags: true
+      - id: version
+        env:
+          MINOR: ${{ inputs.minor }}
+        run: echo "version=0.${MINOR}.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.version }}
+        run: |
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists; nothing to do."
+            exit 0
+          fi
+          gh release create "${TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TAG}" \
+            --generate-notes \
+            --latest
