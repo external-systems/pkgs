@@ -13,7 +13,7 @@
     import-tree.follows = "org-pkgs/import-tree";
 
     # Consumer-facing inputs only; each follows nixpkgs/flake-parts.
-    # Dev-only inputs go in dev/flake.nix.
+    # No dev/flake.nix: formatting, docs and slides come from org-pkgs.
   };
 
   outputs = inputs:
@@ -28,24 +28,12 @@
       ];
 
       imports = [
-        inputs.flake-parts.flakeModules.partitions
+        # treefmt (formatter, checks.treefmt), docs + slides
+        # (packages.documentation/slides, live previews), lock-sync.
+        # documentation/ needs no Nix; set docs.* in a module under
+        # flake-parts/ to change a default (pkgs' "Docs and slides" page).
+        inputs.org-pkgs.flakeModules.dev
         (inputs.import-tree ./flake-parts)
       ];
-
-      # Apps, checks and the formatter are evaluated only on demand; a
-      # consumer of this flake never fetches dev/flake.nix's inputs.
-      # The dev shell is devenv (devenv.yaml), not a flake output.
-      partitionedAttrs = {
-        apps = "dev";
-        checks = "dev";
-        formatter = "dev";
-        # Docs/slides: `nix build .#documentation` (flakeModules.dev).
-        legacyPackages = "dev";
-      };
-
-      partitions.dev = {
-        module = ./dev/flake-module.nix;
-        extraInputsFlake = ./dev;
-      };
     };
 }

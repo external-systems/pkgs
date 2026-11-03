@@ -1,8 +1,10 @@
 # Org-sanctioned formatters and linters. `nix fmt` runs all of them;
 # treefmt-nix also adds checks.treefmt, the CI gate.
-# Needs `treefmt-nix` among the consumer's inputs (its dev/flake.nix).
-{inputs, ...}: {
-  imports = [inputs.treefmt-nix.flakeModule];
+# treefmt-nix is THIS flake's input, bound by flakeModules.nix, so
+# consumers declare nothing.
+{orgInputs}: _: {
+  key = "external-systems/pkgs#flakeModules.treefmt";
+  imports = [orgInputs.treefmt-nix.flakeModule];
 
   perSystem.treefmt.programs = {
     alejandra.enable = true;

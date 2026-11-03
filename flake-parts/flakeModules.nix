@@ -1,34 +1,43 @@
 # Org flake standard, exported once so every external-systems repo imports
-# it instead of copying it. The modules read the CONSUMER's inputs
-# (treefmt-nix), which the consumer declares in its dev/flake.nix, so this
-# flake gains no input and no consumer's main flake.lock grows.
-{inputs, ...}: {
+# it instead of copying it. The modules are bound to THIS flake's inputs
+# (treefmt-nix, reveal-js), so a consumer declares no dev input and needs
+# no dev/flake.nix: one org-pkgs input brings formatting, docs and slides.
+{
+  inputs,
+  flake-parts-lib,
+  ...
+}: let
+  bind = file: flake-parts-lib.importApply file {orgInputs = inputs;};
+in {
   imports = [inputs.flake-parts.flakeModules.flakeModules];
 
   flake = {
     flakeModules = {
       # Org linters as treefmt programs: formatter + checks.treefmt.
-      treefmt = ../flakeModules/treefmt.nix;
-      # treefmt + checks.lock-sync + apps.sync-locks + docs as checks.
-      # The one import a repo's dev partition needs.
-      dev = ../flakeModules/dev.nix;
+      treefmt = bind ../flakeModules/treefmt.nix;
+      # MkDocs site + reveal.js deck: packages.documentation/slides and
+      # the live-preview apps. Replaces external-systems/presenting.
+      docs = bind ../flakeModules/docs.nix;
+      # treefmt + docs + checks.lock-sync + apps.sync-locks + docs as
+      # checks. The one import every repo's flake.nix needs.
+      dev = bind ../flakeModules/dev.nix;
       # flake-parts' flakeModules module aliases the `flakeModule` output
       # to flakeModules.default, which `nix flake check` evaluates.
-      default = ../flakeModules/dev.nix;
+      default = bind ../flakeModules/dev.nix;
     };
 
     # `nix flake init -t github:external-systems/pkgs`
     templates.default = {
       path = ../templates/default;
-      description = "external-systems repo: flake + dev partition, devenv shell, docs and slides";
+      description = "external-systems repo: flake on org-pkgs, devenv shell, docs and slides";
       welcomeText = ''
         # New external-systems repo
 
-        Set the description in flake.nix and site_name in
-        documentation/mkdocs.yml, then lock everything:
+        Set the description in flake.nix and the CHANGE MEs in
+        flake-parts/docs.nix, then lock everything:
 
             git init && git add -A
-            nix flake lock && nix flake lock ./dev && devenv update
+            nix flake lock && devenv update
             nix run .#sync-locks
             devenv allow          # auto-activation (needs `devenv hook`)
             check                 # nix flake check, inside the shell

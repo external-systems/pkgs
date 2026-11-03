@@ -16,8 +16,8 @@ Note: Press `S` for the speaker view, `F` for fullscreen.
 
 ## Org flake standard
 
-- Inputs follow pkgs
-- Dev partition: treefmt, docs, checks
+- One input: org-pkgs (nixpkgs, flake-parts follow it)
+- flakeModules.dev: treefmt, docs + slides, lock-sync
 - devenv CLI shell: `fmt`, `check`, `devenv up`
 
 --

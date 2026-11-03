@@ -1,13 +1,14 @@
-# The org dev partition base: treefmt, the lock-sync check and app, and
-# the docs build as checks. Consumer: partitions.dev.module =
-# ./dev/flake-module.nix, which imports inputs.org-pkgs.flakeModules.dev.
+# The org dev base: treefmt, docs and slides (flakeModules.docs), the
+# lock-sync check and app, and the docs build as checks. A repo imports
+# inputs.org-pkgs.flakeModules.dev in its flake.nix; no dev/flake.nix.
 #
-# Three lockfiles must agree on nixpkgs: flake.lock (consumers),
-# dev/flake.lock (dev-nixpkgs) and devenv.lock (the devenv CLI shell,
-# nixpkgs following org-pkgs/nixpkgs). checks.lock-sync fails when they
-# drift; `sync-locks` (devenv script, or nix run .#sync-locks) re-pins
-# dev/flake.lock and devenv.yaml to flake.lock.
-{
+# The lockfiles must agree on nixpkgs: flake.lock, devenv.lock (the
+# devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, only in a
+# repo that still has one (pkgs itself), dev/flake.lock's dev-nixpkgs.
+# checks.lock-sync fails when they drift; `sync-locks` (devenv script, or
+# nix run .#sync-locks) re-pins devenv.yaml (and dev/flake.lock) to
+# flake.lock.
+{orgInputs}: {
   lib,
   self,
   ...
@@ -30,6 +31,9 @@
 
   rootLock = lockOf "${self}/flake.lock";
   hasDevenv = builtins.pathExists "${self}/devenv.lock";
+  devLockFile = "${self}/dev/flake.lock";
+  devLock = lockOf devLockFile;
+  hasDevNixpkgs = builtins.pathExists devLockFile && devLock.nodes.${devLock.root}.inputs ? dev-nixpkgs;
 
   # pkgs itself owns nixpkgs; every other repo pins nixpkgs through the
   # org-pkgs input (`pkgs` in repos not yet renamed).
@@ -43,7 +47,9 @@
   revs =
     {
       "flake.lock nixpkgs" = revOf rootLock "nixpkgs";
-      "dev/flake.lock dev-nixpkgs" = revOf (lockOf "${self}/dev/flake.lock") "dev-nixpkgs";
+    }
+    // lib.optionalAttrs hasDevNixpkgs {
+      "dev/flake.lock dev-nixpkgs" = revOf devLock "dev-nixpkgs";
     }
     // lib.optionalAttrs hasDevenv {
       "devenv.lock nixpkgs" = revOf (lockOf "${self}/devenv.lock") "nixpkgs";
@@ -51,7 +57,11 @@
   rootRev = revs."flake.lock nixpkgs";
   drifted = lib.filterAttrs (_: rev: rev != rootRev) revs;
 in {
-  imports = [./treefmt.nix];
+  key = "external-systems/pkgs#flakeModules.dev";
+  imports = [
+    (import ./treefmt.nix {inherit orgInputs;})
+    (import ./docs.nix {inherit orgInputs;})
+  ];
 
   perSystem = {
     config,
@@ -69,7 +79,11 @@ in {
       text =
         ''
           cd "$(git rev-parse --show-toplevel)"
+        ''
+        + lib.optionalString hasDevNixpkgs ''
           nix flake lock ./dev --override-input dev-nixpkgs github:NixOS/nixpkgs/${rootRev}
+        ''
+        + ''
           if [ -f devenv.yaml ]; then
         ''
         + (
@@ -85,14 +99,14 @@ in {
         )
         + ''
           fi
-          git status --short flake.lock dev/flake.lock devenv.yaml devenv.lock
+          git status --short flake.lock devenv.yaml devenv.lock ${lib.optionalString hasDevNixpkgs "dev/flake.lock"}
         '';
     };
   in {
     apps.sync-locks = {
       type = "app";
       program = lib.getExe sync-locks;
-      meta.description = "Pin dev/flake.lock and devenv.lock to the flake.lock nixpkgs";
+      meta.description = "Pin devenv.lock (and dev/flake.lock) to the flake.lock nixpkgs";
     };
 
     checks =
@@ -112,10 +126,10 @@ in {
       # fails on broken links).
       // docs;
 
-    # `nix build .#documentation` / `.#slides`: nix falls back from
-    # packages to legacyPackages, and the consumer's flake.nix partitions
-    # legacyPackages to dev, so packages stay at the root and consumers
-    # never fetch the docs inputs.
+    # Mirror for flakes that partition docs away from the root (pkgs
+    # itself, and repos not yet off presenting): nix falls back from
+    # packages to legacyPackages, so `nix build .#documentation` works
+    # there too.
     legacyPackages = docs;
   };
 }

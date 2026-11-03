@@ -124,12 +124,31 @@
         "type": "github"
       }
     },
+    "reveal-js": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1789052901,
+        "narHash": "sha256-yh9Fwp8PT6fFrbSsih7cD9EzH2wbfd3idjyemOQTqF8=",
+        "owner": "hakimel",
+        "repo": "reveal.js",
+        "rev": "75dff6f515d2d08df0c32cf2b7328b89425c6f25",
+        "type": "github"
+      },
+      "original": {
+        "owner": "hakimel",
+        "ref": "6.0.2",
+        "repo": "reveal.js",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-parts": "flake-parts",
         "import-tree": "import-tree",
         "moscripts": "moscripts",
         "nixpkgs": "nixpkgs",
+        "reveal-js": "reveal-js",
+        "treefmt-nix": "treefmt-nix",
         "zen-browser": "zen-browser"
       }
     },
@@ -145,6 +164,26 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "treefmt-nix": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791885023,
+        "narHash": "sha256-C3alQ2MEt0zVrUSho5NUDo3jmhbff72++bfwoqT9Omo=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "0d6d739a833ba9a9c93034862e4a7b061a062a1c",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
         "type": "github"
       }
     },
