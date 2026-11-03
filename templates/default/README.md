@@ -25,7 +25,7 @@ yourself, so `nixd` is on PATH.
 reusable workflow in [external-systems/pkgs](https://github.com/external-systems/pkgs)
 (see its CI docs page). Pull requests and the merge queue run `nix flake
 check`; pushes to main also deploy the docs to GitHub Pages and tag a
-`0.<minor>.<commits>` release, both only after the check passes.
+`<major>.<minor>.<commits>` release, both only after the check passes.
 
 One-time setup for a new repo:
 

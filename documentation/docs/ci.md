@@ -9,7 +9,7 @@ every repo on its next run, with no PR per repo.
 |---|---|---|
 | `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
 | `ci / deploy` | pushes to `main`, after the check | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). |
-| `ci / release` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
+| `ci / release` | pushes to `main`, after the check | Tags `<major>.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
 Only `flake-check` runs on PRs, other branches and the merge queue.
 `deploy` and `release` run only for pushes to the default branch and only
@@ -21,7 +21,7 @@ PR code, never holds `contents: write`, `pages` or `id-token`.
 
 1. Copy `templates/default/.github/workflows/ci.yml` (new repos from
    `nix flake init -t github:external-systems/pkgs` already have it) and
-   set `minor`.
+   set `major` and `minor`.
 2. Delete the repo's old workflows (`check.yml`, `pages.yml`, ...).
 3. Settings → Pages → Source: **GitHub Actions**.
 4. If it has private flake inputs: see
@@ -40,7 +40,9 @@ keeps the actions it uses current, once, for every repo.
 
 The `release` job tags `<major>.<minor>.<patch>`:
 
-- **major** stays `0`.
+- **major** is set by `with: {major: N}` in the caller (default `0`).
+  Bump it by hand for a breaking release, and reset `minor` to `0` in
+  the same change.
 - **minor** is the rolling release series, set by `with: {minor: N}` in
   the caller. Bump it by hand to start a new series.
 - **patch** is `git rev-list --count HEAD`: the number of commits on

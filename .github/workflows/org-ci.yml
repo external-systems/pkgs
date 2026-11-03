@@ -9,7 +9,7 @@
 #   deploy       main pushes, after flake-check: deploy that artifact to
 #                GitHub Pages.
 #   release      main pushes, after flake-check: tag and release
-#                0.<minor>.<commits since the first commit>.
+#                <major>.<minor>.<commits since the first commit>.
 #
 # The caller is templates/default/.github/workflows/ci.yml:
 #
@@ -17,7 +17,7 @@
 #     ci:
 #       uses: external-systems/pkgs/.github/workflows/org-ci.yml@main
 #       permissions: {contents: write, actions: write, pages: write, id-token: write}
-#       with: {minor: 0}
+#       with: {major: 0, minor: 0}
 #       secrets: inherit
 #
 # Required status check for the ruleset: "ci / flake-check" (caller job
@@ -39,8 +39,12 @@ name: org-ci
 on:
   workflow_call:
     inputs:
+      major:
+        description: Major version w in w.x.y (semver). Bump by hand for a breaking release.
+        type: number
+        default: 0
       minor:
-        description: Release series x in 0.x.y. Bump by hand to start a new series.
+        description: Release series x in w.x.y. Bump by hand to start a new series.
         type: number
         default: 0
       private-repos:
@@ -208,7 +212,7 @@ jobs:
       - id: deployment
         uses: actions/deploy-pages@v5
 
-  # Tag <0>.<minor>.<git rev-list --count HEAD>: the patch number only
+  # Tag <major>.<minor>.<git rev-list --count HEAD>: the patch number only
   # grows, because the ruleset forbids force-pushes to main. Re-running is
   # safe: an existing tag is left alone. Tags created with GITHUB_TOKEN do
   # not trigger other workflows.
@@ -233,8 +237,9 @@ jobs:
           fetch-tags: true
       - id: version
         env:
+          MAJOR: ${{ inputs.major }}
           MINOR: ${{ inputs.minor }}
-        run: echo "version=0.${MINOR}.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
+        run: echo "version=${MAJOR}.${MINOR}.$(git rev-list --count HEAD)" >> "$GITHUB_OUTPUT"
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}

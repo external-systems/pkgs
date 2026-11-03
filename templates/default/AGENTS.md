@@ -8,7 +8,7 @@ CHANGE ME: one paragraph on what this repo is.
 - `dev/flake.nix` + `dev/flake.lock`: dev-only inputs. `dev/flake-module.nix`: the dev partition (formatter, checks, apps, docs).
 - `devenv.yaml` + `devenv.lock` + `devenv.nix`: the dev shell. The org shell comes from external-systems/pkgs (`org-pkgs/devenv` in devenv.yaml).
 - `documentation/`: MkDocs site (`docs/`) and reveal.js deck (`slides/`).
-- `.github/workflows/ci.yml`: the org standard CI, calling the org-ci reusable workflow in external-systems/pkgs. `nix flake check` on PRs and the merge queue; on main pushes, after it passes, the Pages deploy and the `0.<minor>.<commits>` release tag. `.github/rulesets/default.json`: the org branch ruleset (required check `ci / flake-check`).
+- `.github/workflows/ci.yml`: the org standard CI, calling the org-ci reusable workflow in external-systems/pkgs. `nix flake check` on PRs and the merge queue; on main pushes, after it passes, the Pages deploy and the `<major>.<minor>.<commits>` release tag. `.github/rulesets/default.json`: the org branch ruleset (required check `ci / flake-check`).
 - `.vscode/`: nixd (Nix language server) settings, resolved from this flake's own inputs and `debug` options; nixd and alejandra come from the devenv shell.
 
 ## Tool loop
