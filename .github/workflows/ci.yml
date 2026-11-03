@@ -29,6 +29,10 @@ jobs:
       contents: read
       # cache-nix-action purges main's superseded store caches.
       actions: write
+    # Also build and upload the Pages artifact on main pushes (drop this
+    # and the pages job if the repo has no docs).
+    with:
+      pages: true
     secrets: inherit
 
   pages:
@@ -40,6 +44,9 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    # The check job already uploaded the site: deploy only.
+    with:
+      prebuilt: true
     secrets: inherit
 
   release:

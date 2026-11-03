@@ -22,6 +22,12 @@ name: pages
 on:
   workflow_call:
     inputs:
+      prebuilt:
+        description: >-
+          The caller's flake-check job (`pages: true`) already uploaded the
+          Pages artifact in this run; skip the build job and only deploy.
+        type: boolean
+        default: false
       attribute:
         description: Flake attribute holding the built site.
         type: string
@@ -48,7 +54,10 @@ jobs:
   build:
     # Only for pushes to the default branch, whatever the caller does
     # (deploy needs build, so it is skipped too).
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: >-
+      !inputs.prebuilt &&
+      github.event_name == 'push' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
@@ -76,6 +85,7 @@ jobs:
       # Read-only: same key scheme as flake-check.yml, which owns saving.
       - uses: nix-community/cache-nix-action@v7
         with:
+          paths: ~/.cache/nix
           primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-${{ hashFiles('**/*.nix') }}
           restore-prefixes-first-match: |
             nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-
@@ -93,6 +103,13 @@ jobs:
 
   deploy:
     needs: build
+    # Runs after build, or straight away when build was skipped because the
+    # artifact is prebuilt. Same default-branch-push guard as build.
+    if: >-
+      !cancelled() &&
+      (needs.build.result == 'success' || (inputs.prebuilt && needs.build.result == 'skipped')) &&
+      github.event_name == 'push' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     # One deployment at a time; never cancel one that is publishing.
     concurrency:

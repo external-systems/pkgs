@@ -6,8 +6,8 @@
 #
 # Private flake inputs (e.g. external-systems/secrets): add a
 # NIX_GITHUB_TOKEN repository secret, or NIX_APP_ID + NIX_APP_PRIVATE_KEY
-# and `with: {private-repos: secrets}` on check and pages.
-# No docs? Delete the pages job.
+# and `private-repos: secrets` under `with:` on check and pages.
+# No docs? Delete the pages job and `pages: true` on check.
 name: ci
 
 on:
@@ -32,6 +32,10 @@ jobs:
       contents: read
       # cache-nix-action purges main's superseded store caches.
       actions: write
+    # Also build and upload the Pages artifact on main pushes (drop this
+    # and the pages job if the repo has no docs).
+    with:
+      pages: true
     secrets: inherit
 
   pages:
@@ -43,6 +47,9 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    # The check job already uploaded the site: deploy only.
+    with:
+      prebuilt: true
     secrets: inherit
 
   release:

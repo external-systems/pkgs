@@ -34,6 +34,12 @@
             check                 # nix flake check, inside the shell
             devenv up             # live docs :8981 and slides :8982
 
+        Then on GitHub: Settings > Pages > Source: GitHub Actions, and
+        apply the branch ruleset (required check "check / flake-check"):
+
+            gh api -X POST repos/external-systems/<repo>/rulesets \
+              --input .github/rulesets/default.json
+
         AGENTS.md describes the layout for coding agents.
       '';
     };
