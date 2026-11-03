@@ -36,5 +36,5 @@ gh api -X POST repos/external-systems/<repo>/rulesets \
 ```
 
 Private flake inputs (e.g. external-systems/secrets): give the repo access to
-the `NIX_APP_ID` / `NIX_APP_PRIVATE_KEY` org secrets and set
+the `NIX_APP_CLIENT_ID` org variable and `NIX_APP_PRIVATE_KEY` org secret and set
 `private-repos: secrets` under `with:` in `ci.yml`.

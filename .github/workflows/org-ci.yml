@@ -30,9 +30,10 @@
 # skipped: a skipped required check counts as passing). Never call this
 # from pull_request_target.
 #
-# Private flake inputs: NIX_APP_ID + NIX_APP_PRIVATE_KEY (GitHub App,
-# with `private-repos`), or a NIX_GITHUB_TOKEN PAT, as org or repo
-# secrets. See documentation/docs/ci.md.
+# Private flake inputs: the GitHub App's Client ID as the variable
+# NIX_APP_CLIENT_ID plus the secret NIX_APP_PRIVATE_KEY (with
+# `private-repos`), or a NIX_GITHUB_TOKEN PAT secret, on the org or the
+# repo. See documentation/docs/ci.md.
 name: org-ci
 
 on:
@@ -45,7 +46,7 @@ on:
       private-repos:
         description: >-
           Comma-separated repos (no owner) the GitHub App token may read,
-          e.g. "secrets". Used only with NIX_APP_ID / NIX_APP_PRIVATE_KEY.
+          e.g. "secrets". Used only with NIX_APP_CLIENT_ID / NIX_APP_PRIVATE_KEY.
         type: string
         default: ""
       cachix-name:
@@ -68,10 +69,11 @@ on:
         type: number
         default: 90
     secrets:
-      NIX_APP_ID:
-        description: GitHub App id; with NIX_APP_PRIVATE_KEY mints a one-hour token for private-repos.
-        required: false
       NIX_APP_PRIVATE_KEY:
+        description: >-
+          GitHub App private key; with the NIX_APP_CLIENT_ID variable
+          (not a secret: the Client ID is public) mints a one-hour token
+          for private-repos.
         required: false
       NIX_GITHUB_TOKEN:
         description: Fallback fine-grained PAT with read-only Contents on the private input repos.
@@ -98,7 +100,7 @@ jobs:
       group: flake-check-${{ github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
-      HAS_APP: ${{ secrets.NIX_APP_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
+      HAS_APP: ${{ vars.NIX_APP_CLIENT_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
       HAS_CACHIX: ${{ inputs.cachix-name != '' }}
       MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     steps:
@@ -119,9 +121,9 @@ jobs:
         if: env.HAS_APP == 'true'
         uses: actions/create-github-app-token@v3
         with:
-          # `client-id` (`app-id` is deprecated) takes the App's Client ID
-          # or its numeric App ID: both go to the same auth field.
-          client-id: ${{ secrets.NIX_APP_ID }}
+          # The caller's org/repo variable: in a reusable workflow, `vars`
+          # resolves against the calling repository.
+          client-id: ${{ vars.NIX_APP_CLIENT_ID }}
           private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.private-repos }}
