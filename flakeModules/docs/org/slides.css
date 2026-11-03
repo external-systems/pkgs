@@ -1,0 +1,249 @@
+/* The org look for reveal.js decks (pkgs flakeModules.docs,
+   docs.orgStyle): a warm dark background, cream text and clay-orange
+   accents, plus building blocks any deck can use (kicker, big, hint,
+   takeaway, layer, spec listings, ticks, icons, tiles, sketch diagrams).
+   Loaded after the reveal.js theme and before the deck's own CSS
+   (docs.slides.extraHead), so a deck overrides it. */
+
+:root {
+	--bg: #1f1e1d;
+	--bg-deep: #141413;
+	--surface: #2b2a27;
+	--surface-2: #363430;
+	--cream: #faf9f5;
+	--muted: #b0aea5;
+	--clay: #d97757;
+	--clay-soft: #e8a48a;
+	--blue: #6a9bcc;
+	--green: #8fa876;
+	--sand: #e3c08d;
+	--rose: #c9789a;
+
+	/* reveal.js theme variables */
+	--r-background-color: var(--bg);
+	--r-main-color: var(--cream);
+	--r-heading-color: var(--cream);
+	--r-link-color: var(--clay);
+	--r-link-color-hover: var(--clay-soft);
+	--r-selection-background-color: var(--clay);
+	--r-heading-font: Georgia, "Times New Roman", serif;
+	--r-heading-text-transform: none;
+	--r-heading-font-weight: 500;
+	--r-heading-letter-spacing: -0.01em;
+	--r-main-font-size: 34px;
+}
+
+.reveal .slides section {
+	text-align: center;
+}
+.reveal h1 {
+	font-size: 2.2em;
+}
+.reveal h2 {
+	font-size: 1.45em;
+	margin-bottom: 0.5em;
+}
+.reveal h2::after {
+	/* a short clay underline under every slide title */
+	content: "";
+	display: block;
+	width: 2.2em;
+	height: 4px;
+	margin: 0.25em auto 0;
+	border-radius: 2px;
+	background: var(--clay);
+}
+.reveal strong {
+	color: var(--clay);
+}
+.reveal em {
+	color: var(--sand);
+	font-style: normal;
+}
+.reveal .muted,
+.reveal small {
+	color: var(--muted);
+}
+.reveal .big {
+	font-size: 1.35em;
+	line-height: 1.3;
+}
+.reveal .kicker {
+	color: var(--clay);
+	font-size: 0.6em;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	margin-bottom: 0.3em;
+}
+.reveal .hint {
+	margin-top: 1.2em;
+	color: var(--muted);
+	font-size: 0.5em;
+}
+.reveal table {
+	font-size: 0.72em;
+}
+.reveal table th {
+	color: var(--clay);
+	border-bottom: 2px solid var(--clay);
+}
+.reveal table td {
+	border-bottom: 1px solid var(--surface-2);
+}
+
+/* A short takeaway line. */
+.takeaway {
+	background: var(--surface);
+	border-left: 8px solid var(--clay);
+	border-radius: 0.3em;
+	padding: 0.4em 0.8em;
+	margin: 0.6em auto 0;
+	font-size: 0.78em;
+	text-align: left;
+	width: 88%;
+}
+
+/* A stacked layer cake: .layer elements, top to bottom. */
+.layer {
+	display: flex;
+	justify-content: space-between;
+	gap: 1em;
+	margin: 0.18em auto;
+	padding: 0.38em 0.8em;
+	border-radius: 0.35em;
+	background: var(--surface);
+	border-left: 8px solid var(--clay);
+	font-size: 0.68em;
+	text-align: left;
+}
+.layer span:last-child {
+	color: var(--muted);
+	text-align: right;
+}
+
+/* Title and section slides: a deeper background with a clay glow. */
+.reveal .title-slide h1 {
+	font-size: 2.6em;
+	margin-bottom: 0.1em;
+}
+.reveal .title-slide h2::after {
+	display: none;
+}
+
+/* Short YAML / pseudocode listings: keys sand, comments muted. */
+.reveal pre.spec {
+	box-sizing: border-box;
+	width: 100%;
+	margin: 0.3em 0;
+	box-shadow: none;
+	background: var(--bg-deep);
+	border: 1px solid var(--surface-2);
+	border-left: 6px solid var(--clay);
+	border-radius: 0.35em;
+	padding: 0.5em 0.8em;
+	font-size: 0.58em;
+	line-height: 1.4;
+	text-align: left;
+	color: var(--cream);
+	white-space: pre;
+}
+.reveal pre.spec .k {
+	color: var(--sand);
+}
+.reveal pre.spec .c {
+	color: var(--muted);
+	font-style: italic;
+}
+.reveal pre.spec .v {
+	color: var(--clay-soft);
+}
+.reveal pre.spec .kw {
+	color: var(--blue);
+	font-weight: 700;
+}
+
+/* A plain checklist (✓ / ✗ rows). */
+.reveal ul.ticks {
+	list-style: none;
+	margin: 0;
+	font-size: 0.74em;
+	line-height: 1.5;
+}
+.reveal ul.ticks li::before {
+	content: "✓ ";
+	color: var(--green);
+	font-weight: 700;
+}
+.reveal ul.ticks.cross li::before {
+	content: "✗ ";
+	color: var(--rose);
+}
+
+/* ------------------------------------------------------------------
+   Icons and hand-drawn diagrams
+   ------------------------------------------------------------------ */
+
+/* <div class="diagram"><svg class="sketch">: see sketch.js */
+.diagram {
+	margin: 0.1em auto 0;
+}
+.diagram svg {
+	display: block;
+	width: 100%;
+	height: auto;
+	overflow: visible;
+}
+svg.sketch text {
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+	fill: var(--cream);
+}
+svg.sketch text.sans {
+	font-family: "Source Sans Pro", Helvetica, sans-serif;
+}
+svg.sketch text.mono {
+	font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+/* Product logos. */
+.reveal img.icon {
+	display: inline-block;
+	height: 1.15em;
+	width: auto;
+	margin: 0 0.12em;
+	vertical-align: -0.22em;
+}
+.reveal img.hero {
+	height: 2.6em;
+	margin: 0 auto 0.2em;
+}
+
+/* Icon tiles: a logo, a name and a short line. No box around it. */
+.tiles {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	gap: 0.5em 1.2em;
+	margin: 0.5em 0;
+}
+.tile {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 6.4em;
+	font-size: 0.62em;
+	line-height: 1.25;
+	text-align: center;
+}
+.reveal .tile img {
+	height: 2.7em;
+	width: auto;
+	max-width: 5.5em;
+	margin: 0 0 0.35em;
+}
+.tile b {
+	font-size: 1.05em;
+}
+.tile span {
+	color: var(--muted);
+}
+
