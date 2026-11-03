@@ -1,0 +1,11 @@
+# Keeps the actions pinned in org-ci.yml current. Every org repo calls
+# org-ci.yml@main, so a bump merged here reaches all of them at once.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

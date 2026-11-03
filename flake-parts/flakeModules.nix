@@ -35,7 +35,7 @@
             devenv up             # live docs :8981 and slides :8982
 
         Then on GitHub: Settings > Pages > Source: GitHub Actions, and
-        apply the branch ruleset (required check "check / flake-check"):
+        apply the branch ruleset (required check "ci / flake-check"):
 
             gh api -X POST repos/external-systems/<repo>/rulesets \
               --input .github/rulesets/default.json
