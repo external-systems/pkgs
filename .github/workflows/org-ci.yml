@@ -113,11 +113,11 @@ jobs:
           echo "::error::PR author ${{ github.event.pull_request.user.login }} (${{ github.event.pull_request.author_association }}) is not trusted to run CI here."
           exit 1
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - id: app-token
         if: env.HAS_APP == 'true'
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.NIX_APP_ID }}
           private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
@@ -133,7 +133,7 @@ jobs:
             access-tokens = github.com=${{ steps.app-token.outputs.token || secrets.NIX_GITHUB_TOKEN || github.token }}
 
       - if: env.HAS_CACHIX == 'true'
-        uses: cachix/cachix-action@v16
+        uses: cachix/cachix-action@v17
         with:
           name: ${{ inputs.cachix-name }}
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
@@ -222,7 +222,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Full history: the patch number is the commit count.
           fetch-depth: 0
