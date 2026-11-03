@@ -1,4 +1,8 @@
 result
 result-*
 .devenv*
+.direnv
 devenv.local.nix
+# Pages builds happen in CI only; never commit them.
+_site/
+site/

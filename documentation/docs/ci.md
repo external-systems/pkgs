@@ -117,38 +117,56 @@ Fork PRs never receive secrets (`pull_request`, never
 
 ## Ruleset
 
-The org-standard branch ruleset for `main` (repo or org level):
+The org-standard branch ruleset for `main`, the one pkgs runs. New repos get it as
+`templates/default/.github/rulesets/default.json`:
 
 ```json
 {
-  "name": "main",
+  "name": "default",
   "target": "branch",
   "enforcement": "active",
-  "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+  "conditions": {
+    "ref_name": {
+      "include": ["~DEFAULT_BRANCH"],
+      "exclude": []
+    }
+  },
   "rules": [
-    {"type": "deletion"},
-    {"type": "non_fast_forward"},
-    {"type": "required_linear_history"},
-    {"type": "required_signatures"},
-    {"type": "pull_request", "parameters": {
-      "required_approving_review_count": 0,
-      "dismiss_stale_reviews_on_push": false,
-      "require_code_owner_review": false,
-      "require_last_push_approval": false,
-      "required_review_thread_resolution": true,
-      "allowed_merge_methods": ["squash"]}},
-    {"type": "required_status_checks", "parameters": {
-      "strict_required_status_checks_policy": false,
-      "do_not_enforce_on_create": false,
-      "required_status_checks": [
-        {"context": "check / flake-check", "integration_id": 15368}]}}
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    { "type": "required_linear_history" },
+    { "type": "required_signatures" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 0,
+        "dismiss_stale_reviews_on_push": false,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
+        "required_review_thread_resolution": false,
+        "allowed_merge_methods": ["squash"]
+      }
+    },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": true,
+        "do_not_enforce_on_create": false,
+        "required_status_checks": [
+          { "context": "check / flake-check", "integration_id": 15368 }
+        ]
+      }
+    }
   ],
   "bypass_actors": [
-    {"actor_id": null, "actor_type": "OrganizationAdmin", "bypass_mode": "pull_request"}
+    { "actor_id": null, "actor_type": "OrganizationAdmin", "bypass_mode": "pull_request" }
   ]
 }
 ```
 
+- `strict_required_status_checks_policy: true` ("Require branches to be
+  up to date"): a PR's check must have passed against the current
+  `main`, so two PRs that pass alone can't break it together.
 - `bypass_mode: pull_request` lets an admin merge a PR past the rules
   but not push straight to `main`.
 - `integration_id` 15368 is GitHub Actions, so only Actions can satisfy
@@ -157,8 +175,8 @@ The org-standard branch ruleset for `main` (repo or org level):
   one, set its merge method to squash, because a merge-commit queue
   conflicts with linear history.
 - Apply to one repo with
-  `gh api -X PUT repos/external-systems/<repo>/rulesets/<id> --input main-ruleset.json`
-  (or `POST .../rulesets` for a new one). Org-wide:
+  `gh api -X POST repos/external-systems/<repo>/rulesets --input .github/rulesets/default.json`
+  (or `PUT .../rulesets/<id>` to replace an existing one). Org-wide:
   Org settings → Repository → Rulesets, targeting all repositories.
 
 ## Protecting public repos
