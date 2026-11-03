@@ -6,7 +6,7 @@ Every external-systems repo runs the same CI, defined once here in
 | Workflow | Runs on | Does |
 |---|---|---|
 | `flake-check.yml` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store. Owns the store cache. |
-| `pages.yml` | pushes to `main`, after the check | Builds `.#documentation` (MkDocs + reveal.js deck at `/slides/`, from the external-systems/presenting modules) and deploys it to GitHub Pages. |
+| `pages.yml` | pushes to `main`, after the check | Deploys the site the check job built (`prebuilt: true`), or builds `.#documentation` (MkDocs + reveal.js deck at `/slides/`, from the external-systems/presenting modules) and deploys it to GitHub Pages. |
 | `release.yml` | pushes to `main`, after the check | Tags `0.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
 Only `flake-check` runs on PRs, other branches and the merge queue.
@@ -62,10 +62,15 @@ recently used evicted) through `nix-community/cache-nix-action`.
   locks* (identical inputs, only local code changed), then to the newest
   cache of any lock. Before this, any `.nix` edit fell straight to "newest
   of anything".
-- **Deploy after check.** `pages` and `release` wait for `check`, so
-  `pages` restores the cache `check` saved a minute earlier, and the docs
-  were already built as a check. Before, both started together and
-  `pages` got the previous push's cache.
+- **The check hands over the site.** `nix flake check` already builds
+  the docs, so on `main` pushes the check job (`pages: true`) runs `nix
+  build .#documentation` (a store hit) and uploads the Pages artifact.
+  `pages` (`prebuilt: true`) then only deploys: no second runner, store
+  restore or evaluation. Without `prebuilt`, `pages` builds it itself
+  after `check`, from the cache `check` just saved.
+- **Warm evaluation.** `~/.cache/nix` (unpacked flake inputs and the eval
+  cache) is cached with the store, so jobs don't re-extract nixpkgs and
+  every other input before evaluating.
 - **main runs never cancel.** PR runs cancel superseded ones; `main` runs
   queue, so a quick second push can't kill the run that was saving the
   cache.

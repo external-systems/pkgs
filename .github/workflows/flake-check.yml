@@ -46,6 +46,17 @@ on:
         description: Store size the cache is GC'd down to before saving.
         type: string
         default: 5G
+      pages:
+        description: >-
+          On pushes to the default branch, also build `pages-attribute`
+          (already built by the check, so a store hit) and upload it as the
+          Pages artifact. Pair with `prebuilt: true` on pages.yml.
+        type: boolean
+        default: false
+      pages-attribute:
+        description: Flake attribute holding the built site.
+        type: string
+        default: documentation
       timeout-minutes:
         type: number
         default: 90
@@ -116,8 +127,11 @@ jobs:
       #     else can read, which only evicts main's.
       #   - GC'd to gc-max-store-size before saving; older main caches are
       #     purged so one current cache remains.
+      #   - ~/.cache/nix rides along: the fetcher cache (unpacked flake
+      #     inputs) and the eval cache, so evaluation is warm too.
       - uses: nix-community/cache-nix-action@v7
         with:
+          paths: ~/.cache/nix
           primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-${{ hashFiles('**/*.nix') }}
           restore-prefixes-first-match: |
             nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/flake.lock', '**/devenv.lock') }}-
@@ -131,3 +145,23 @@ jobs:
 
       - name: nix flake check
         run: nix flake check ${{ inputs.check-args }}
+
+      # Hand the site to pages.yml (prebuilt: true), so the deploy needs no
+      # second runner, store restore or evaluation.
+      - name: Build the Pages site
+        if: >-
+          inputs.pages &&
+          github.event_name == 'push' &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        run: |
+          nix build ".#${{ inputs.pages-attribute }}" --print-build-logs
+          # Copy out of the read-only Nix store for the Pages upload.
+          cp -rL result _site
+          chmod -R u+w _site
+      - if: >-
+          inputs.pages &&
+          github.event_name == 'push' &&
+          github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
