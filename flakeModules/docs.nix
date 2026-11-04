@@ -42,7 +42,6 @@ in {
 
   perSystem = {
     config,
-    options,
     pkgs,
     ...
   }: let
@@ -241,10 +240,7 @@ in {
     options.docs = {
       enable = mkOption {
         type = types.bool;
-        # Off while a repo still imports presenting's mkdocs-flake module
-        # (it defines packages.documentation too); drop that clause once
-        # every repo has moved to this module.
-        default = builtins.pathExists "${cfg.root}/docs" && !(options ? documentation || options ? presenting);
+        default = builtins.pathExists "${cfg.root}/docs";
         defaultText = lib.literalMD "`true` when `documentation/docs/` exists";
         description = "Build the MkDocs site (`packages.documentation`) and its live preview.";
       };
@@ -339,7 +335,7 @@ in {
       slides = {
         enable = mkOption {
           type = types.bool;
-          default = builtins.pathExists slides.dir && !(options ? presenting);
+          default = builtins.pathExists slides.dir;
           defaultText = lib.literalMD "`true` when `documentation/slides/` exists";
           description = "Build the reveal.js deck (`packages.slides`) and its live preview.";
         };
