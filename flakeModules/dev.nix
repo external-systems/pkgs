@@ -127,7 +127,7 @@ in {
       // docs;
 
     # Mirror for flakes that partition docs away from the root (pkgs
-    # itself, and repos not yet off presenting): nix falls back from
+    # itself): nix falls back from
     # packages to legacyPackages, so `nix build .#documentation` works
     # there too.
     legacyPackages = docs;

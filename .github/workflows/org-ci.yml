@@ -1,7 +1,7 @@
 # The external-systems org CI: one reusable workflow every repo calls.
-# Every org repo is a flake with MkDocs + reveal.js docs (the
-# external-systems/presenting modules, `.#documentation`), so it is the
-# same three jobs everywhere:
+# Every org repo is a flake with MkDocs + reveal.js docs (pkgs
+# flakeModules.docs, `.#documentation`), so it is the same three jobs
+# everywhere:
 #
 #   flake-check  PRs, merge queue, main: `nix flake check` with a warm
 #                store; on main pushes it also builds the docs (a store

@@ -203,14 +203,3 @@ in.
   allowfullscreen></iframe>
 ```
 
-## Moving a repo off external-systems/presenting
-
-1. Bump org-pkgs, import `inputs.org-pkgs.flakeModules.default` in
-   `flake.nix`, drop the partition, `dev/flake.nix` and `dev/flake.lock`.
-2. Replace `documentation/flake-module.nix` with the `docs.*` settings
-   above, or delete it. Delete `mkdocs.yml` and `slides/index.html` unless
-   the repo needs them as escape hatches.
-3. `nix flake lock`, `sync-locks`, `fmt`, `check`.
-
-While a repo still imports presenting's module, `docs.enable` stays off,
-so bumping org-pkgs alone does not break its build.

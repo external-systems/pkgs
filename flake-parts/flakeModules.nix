@@ -16,7 +16,7 @@ in {
       # Org linters as treefmt programs: formatter + checks.treefmt.
       treefmt = bind ../flakeModules/treefmt.nix;
       # MkDocs site + reveal.js deck: packages.documentation/slides and
-      # the live-preview apps. Replaces external-systems/presenting.
+      # the live-preview apps.
       docs = bind ../flakeModules/docs.nix;
       # treefmt + docs + checks.lock-sync + apps.sync-locks + docs as
       # checks: the one import every repo's flake.nix needs
