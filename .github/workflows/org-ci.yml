@@ -7,7 +7,8 @@
 #                store; on main pushes it also builds the docs (a store
 #                hit after the check) and uploads the Pages artifact.
 #   deploy       main pushes, after flake-check: deploy that artifact to
-#                GitHub Pages.
+#                GitHub Pages. `pages: false` skips it and the Pages
+#                build (a repo whose docs must stay unpublished).
 #   release      main pushes, after flake-check: tag and release
 #                <major>.<minor>.<commits since the first commit>.
 #
@@ -47,6 +48,12 @@ on:
         description: Release series x in w.x.y. Bump by hand to start a new series.
         type: number
         default: 0
+      pages:
+        description: >-
+          Build the docs and deploy them to GitHub Pages on main pushes.
+          Set false for a repo whose docs must not be published.
+        type: boolean
+        default: true
       private-repos:
         description: >-
           Comma-separated repos (no owner) the GitHub App token may read,
@@ -107,6 +114,7 @@ jobs:
       HAS_APP: ${{ vars.NIX_APP_CLIENT_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
       HAS_CACHIX: ${{ inputs.cachix-name != '' }}
       MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      PAGES: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.pages }}
     steps:
       # Fail closed for untrusted PR authors. merge_group and push events
       # can only be started by people with write access.
@@ -180,20 +188,20 @@ jobs:
       # the artifact to deploy saves a runner, a store restore and an
       # evaluation.
       - name: Build the Pages site
-        if: env.MAIN_PUSH == 'true'
+        if: env.PAGES == 'true'
         run: |
           nix build .#documentation --print-build-logs
           # Copy out of the read-only Nix store for the Pages upload.
           cp -rL result _site
           chmod -R u+w _site
-      - if: env.MAIN_PUSH == 'true'
+      - if: env.PAGES == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
   deploy:
     needs: flake-check
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.pages
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
