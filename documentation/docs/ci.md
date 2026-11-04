@@ -8,7 +8,7 @@ every repo on its next run, with no PR per repo.
 | Job | Runs on | Does |
 |---|---|---|
 | `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
-| `ci / deploy` | pushes to `main`, after the check | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). |
+| `ci / deploy` | pushes to `main`, after the check; public repos only | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). Private repos skip the Pages build and deploy: GitHub Free has no Pages for them. |
 | `ci / release` | pushes to `main`, after the check | Tags `<major>.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 
 Only `flake-check` runs on PRs, other branches and the merge queue.

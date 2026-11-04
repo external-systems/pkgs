@@ -7,7 +7,8 @@
 #                store; on main pushes it also builds the docs (a store
 #                hit after the check) and uploads the Pages artifact.
 #   deploy       main pushes, after flake-check: deploy that artifact to
-#                GitHub Pages.
+#                GitHub Pages. Skipped (with the Pages build) in private
+#                repos.
 #   release      main pushes, after flake-check: tag and release
 #                <major>.<minor>.<commits since the first commit>.
 #
@@ -107,6 +108,9 @@ jobs:
       HAS_APP: ${{ vars.NIX_APP_CLIENT_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
       HAS_CACHIX: ${{ inputs.cachix-name != '' }}
       MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+      # GitHub Free has no Pages for private repos (and their docs must
+      # not go public anyway): they skip the Pages build and deploy.
+      PAGES: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && !github.event.repository.private }}
     steps:
       # Fail closed for untrusted PR authors. merge_group and push events
       # can only be started by people with write access.
@@ -180,20 +184,20 @@ jobs:
       # the artifact to deploy saves a runner, a store restore and an
       # evaluation.
       - name: Build the Pages site
-        if: env.MAIN_PUSH == 'true'
+        if: env.PAGES == 'true'
         run: |
           nix build .#documentation --print-build-logs
           # Copy out of the read-only Nix store for the Pages upload.
           cp -rL result _site
           chmod -R u+w _site
-      - if: env.MAIN_PUSH == 'true'
+      - if: env.PAGES == 'true'
         uses: actions/upload-pages-artifact@v5
         with:
           path: _site
 
   deploy:
     needs: flake-check
-    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && !github.event.repository.private
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
