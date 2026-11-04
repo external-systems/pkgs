@@ -1,6 +1,6 @@
 # The org dev base: treefmt, docs and slides (flakeModules.docs), the
 # lock-sync check and app, and the docs build as checks. A repo imports
-# inputs.org-pkgs.flakeModules.dev in its flake.nix; no dev/flake.nix.
+# inputs.org-pkgs.flakeModules.default in its flake.nix; no dev/flake.nix.
 #
 # The lockfiles must agree on nixpkgs: flake.lock, devenv.lock (the
 # devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, only in a
@@ -127,7 +127,7 @@ in {
       // docs;
 
     # Mirror for flakes that partition docs away from the root (pkgs
-    # itself, and repos not yet off presenting): nix falls back from
+    # itself): nix falls back from
     # packages to legacyPackages, so `nix build .#documentation` works
     # there too.
     legacyPackages = docs;

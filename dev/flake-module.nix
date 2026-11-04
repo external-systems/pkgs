@@ -2,7 +2,7 @@
 # the code-agent image. A consumer of packages, overlays or lib never
 # evaluates it.
 {inputs, ...}: {
-  # By path, not self.flakeModules.dev: reading self here would recurse.
+  # By path, not self.flakeModules.default: reading self here would recurse.
   imports = [
     (import ../flakeModules/dev.nix {orgInputs = inputs;})
     ../documentation/flake-module.nix

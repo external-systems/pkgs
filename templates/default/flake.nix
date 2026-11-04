@@ -32,7 +32,7 @@
         # (packages.documentation/slides, live previews), lock-sync.
         # documentation/ needs no Nix; set docs.* in a module under
         # flake-parts/ to change a default (pkgs' "Docs and slides" page).
-        inputs.org-pkgs.flakeModules.dev
+        inputs.org-pkgs.flakeModules.default
         (inputs.import-tree ./flake-parts)
       ];
     };

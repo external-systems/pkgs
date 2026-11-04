@@ -16,14 +16,14 @@ in {
       # Org linters as treefmt programs: formatter + checks.treefmt.
       treefmt = bind ../flakeModules/treefmt.nix;
       # MkDocs site + reveal.js deck: packages.documentation/slides and
-      # the live-preview apps. Replaces external-systems/presenting.
+      # the live-preview apps.
       docs = bind ../flakeModules/docs.nix;
       # treefmt + docs + checks.lock-sync + apps.sync-locks + docs as
-      # checks. The one import every repo's flake.nix needs.
-      dev = bind ../flakeModules/dev.nix;
-      # flake-parts' flakeModules module aliases the `flakeModule` output
-      # to flakeModules.default, which `nix flake check` evaluates.
+      # checks: the one import every repo's flake.nix needs
+      # (inputs.org-pkgs.flakeModules.default).
       default = bind ../flakeModules/dev.nix;
+      # Old name for default; remove once no repo imports it.
+      dev = bind ../flakeModules/dev.nix;
     };
 
     # `nix flake init -t github:external-systems/pkgs`

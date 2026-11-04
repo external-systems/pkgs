@@ -159,10 +159,9 @@ committed hash; airgap image sets cover the committed Cilium manifest.
 ## Org flake standard
 
 pkgs also carries what every external-systems repo builds on:
-`flakeModules.treefmt`, `flakeModules.docs` (MkDocs site + reveal.js deck,
-replacing external-systems/presenting), `flakeModules.dev` (both, plus
+`flakeModules.treefmt`, `flakeModules.docs` (MkDocs site + reveal.js deck), `flakeModules.default` (both, plus
 lock-sync), the org devenv shell (`devenv/`) and `templates.default`. A repo
-imports `inputs.org-pkgs.flakeModules.dev` and needs no dev inputs of its
+imports `inputs.org-pkgs.flakeModules.default` and needs no dev inputs of its
 own. Start a repo with
 `nix flake init -t github:external-systems/pkgs`. The full description is in
 the docs site (`documentation/docs/flake-standard.md`) and the `nix-style`
