@@ -7,6 +7,8 @@
 # Private flake inputs (e.g. external-systems/secrets): give the repo the
 # NIX_APP_CLIENT_ID org variable and NIX_APP_PRIVATE_KEY org secret and add
 # `private-repos: secrets` under `with:`.
+#
+# Docs that must not be published: add `pages: false` under `with:`.
 name: ci
 
 on:
