@@ -54,6 +54,25 @@ inputs, so a repo declares neither. They add two small nodes to every
 | `devenv test` | treefmt check and lock sync, no VMs |
 | `sync-locks` | after `nix flake update org-pkgs`: re-pin `devenv.lock` |
 
+## Badges
+
+Every public repo shows the same row of [shields.io](https://shields.io)
+badges under the title of its `README.md` and `documentation/docs/index.md`
+(the template has both, with `CHANGE-ME` as the repo name):
+
+| Badge | Shows | Needs |
+|---|---|---|
+| ci | `ci / flake-check` on `main` | the org CI |
+| release | the latest `w.x.<commits>` tag | the org CI's `release` job |
+| docs | whether `https://<repo>.external.systems/` answers | Pages with the custom domain |
+| license | the `LICENSE` file's license | a `LICENSE` file |
+| built with Nix | static | nothing |
+
+Drop a badge whose "needs" the repo lacks yet. Private repos (secrets,
+gitops) get no badges: shields.io asks GitHub as an anonymous client, so
+a private repo looks like it does not exist. On a docs build opened from
+disk without internet, the badges show their text labels.
+
 ## Docs without a server
 
 `nix build .#documentation` builds the static site with the deck embedded
