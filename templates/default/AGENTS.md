@@ -3,7 +3,7 @@
 CHANGE ME: one paragraph on what this repo is.
 
 ## Layout
-- `flake.nix`: consumer-facing inputs (all follow external-systems/pkgs); imports `org-pkgs.flakeModules.dev` (treefmt, docs and slides, lock-sync). No dev partition, no `dev/flake.nix`.
+- `flake.nix`: consumer-facing inputs (all follow external-systems/pkgs); imports `org-pkgs.flakeModules.default` (treefmt, docs and slides, lock-sync). No dev partition, no `dev/flake.nix`.
 - `flake-parts/`: consumer-facing flake-parts modules, auto-imported (import-tree).
 - `flake-parts/docs.nix`: `docs.*` settings that differ from the org defaults (pkgs' "Docs and slides" page).
 - `devenv.yaml` + `devenv.lock` + `devenv.nix`: the dev shell. The org shell comes from external-systems/pkgs (`org-pkgs/devenv` in devenv.yaml).

@@ -37,7 +37,7 @@
   relative = dir: lib.removePrefix "${toString self}/" (toString dir);
 in {
   # importApply'd modules have no key of their own; this one dedups
-  # flakeModules.docs imported both directly and through flakeModules.dev.
+  # flakeModules.docs imported both directly and through flakeModules.default.
   key = "external-systems/pkgs#flakeModules.docs";
 
   perSystem = {

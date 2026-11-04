@@ -1,7 +1,7 @@
 # Docs and slides
 
 Every external-systems repo has a MkDocs website and a reveal.js deck.
-`flakeModules.docs` (part of `flakeModules.dev`) builds both. A repo that
+`flakeModules.docs` (part of `flakeModules.default`) builds both. A repo that
 follows the layout below needs no Nix for its docs.
 
 ## Layout
@@ -20,7 +20,7 @@ documentation/
 | `packages.slides` | the deck alone, Markdown inlined, reveal.js next to it |
 | `apps.watch-documentation` | live preview on 127.0.0.1:8981 (`docs` devenv script) |
 | `apps.serve-slides` | live preview on 127.0.0.1:8982 (`slides` devenv script) |
-| `checks.documentation`, `checks.slides` | both builds, from `flakeModules.dev` |
+| `checks.documentation`, `checks.slides` | both builds, from `flakeModules.default` |
 
 MkDocs, Material and the Markdown extensions come from the org nixpkgs, so
 they download from cache.nixos.org. reveal.js is pinned by pkgs
@@ -90,7 +90,7 @@ it. Put fragment classes on a `<g>` around shapes, never on a shape.
       systems = ["x86_64-linux" "aarch64-linux"];
       imports = [
         # treefmt, docs + slides, lock-sync: everything from pkgs.
-        inputs.org-pkgs.flakeModules.dev
+        inputs.org-pkgs.flakeModules.default
         (inputs.import-tree ./flake-parts)
         # Only when it sets something:
         ./documentation/flake-module.nix
@@ -205,7 +205,7 @@ in.
 
 ## Moving a repo off external-systems/presenting
 
-1. Bump org-pkgs, import `inputs.org-pkgs.flakeModules.dev` in
+1. Bump org-pkgs, import `inputs.org-pkgs.flakeModules.default` in
    `flake.nix`, drop the partition, `dev/flake.nix` and `dev/flake.lock`.
 2. Replace `documentation/flake-module.nix` with the `docs.*` settings
    above, or delete it. Delete `mkdocs.yml` and `slides/index.html` unless

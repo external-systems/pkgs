@@ -8,7 +8,7 @@ its sandbox on, the default) and devenv; nothing else.
 ```
 flake.nix / flake.lock      one org-pkgs input (nixpkgs, flake-parts,
                             import-tree follow it); imports
-                            inputs.org-pkgs.flakeModules.dev
+                            inputs.org-pkgs.flakeModules.default
 flake-parts/                the repo's own modules (import-tree)
 devenv.yaml / devenv.lock   org-pkgs input (this repo), nixpkgs follows
                             org-pkgs/nixpkgs, imports org-pkgs/devenv
@@ -35,7 +35,7 @@ nix flake init -t github:external-systems/pkgs
 |---|---|
 | `flakeModules.treefmt` | alejandra, deadnix, nixf-diagnose, shellcheck, sizelint, statix as treefmt programs: `formatter`, `checks.treefmt` |
 | `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
-| `flakeModules.dev` | treefmt, docs, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
+| `flakeModules.default` | treefmt, docs, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
 | `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides` scripts, `devenv up` docs + slides processes, `devenv test` gates |
 | `templates.default` | the whole layout for a new repo |
 
