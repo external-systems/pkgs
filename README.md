@@ -36,10 +36,11 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
   `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
 - **Overlays** — `overlays.default` composes the Kubernetes, IfState,
-  tools and third-party overlays; `overlays.kubernetes`, `overlays.ifstate`,
-  `overlays.tools` and `overlays.third-party` (`zen-browser` and
-  `moscripts`, taken from their own flakes, which are this flake's only
-  non-core inputs) are also
+  tools, VS Code extension and third-party overlays; `overlays.kubernetes`,
+  `overlays.ifstate`, `overlays.tools`, `overlays.vscode-extensions`
+  (nix-community/nix-vscode-extensions) and `overlays.third-party`
+  (`zen-browser` and `moscripts`, taken from their own flakes; with
+  nix-vscode-extensions, this flake's only non-core inputs) are also
   exported separately. Applying the default overlay gives you the pinned
   artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`. The builder
   expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
@@ -185,6 +186,19 @@ overlay adds no flake input to consumers' locks.
 
 `claude-code`, `pi-coding-agent`, `tfctl`, `devenv`, `mcp-nixos` and
 `github-mcp-server` come straight from nixpkgs.
+
+## VS Code extensions overlay
+
+`overlays.vscode-extensions` (also in `overlays.default`) adds
+[nix-community/nix-vscode-extensions](https://github.com/nix-community/nix-vscode-extensions)'
+sets: `pkgs.open-vsx`, `pkgs.open-vsx-release`, `pkgs.vscode-marketplace`
+and `pkgs.vscode-marketplace-release`, every extension on Open VSX and the
+VS Code Marketplace as `<set>.<publisher>.<name>` (lowercase). The
+`-release` sets skip pre-releases. Upstream re-indexes daily;
+`nix flake update nix-vscode-extensions` moves every extension to its
+latest version. The input is lazy: a consumer that never reads these
+attributes never fetches it. external-systems/modules
+`homeModules.vscodium` takes its extensions from here.
 
 ## code-agent image
 
