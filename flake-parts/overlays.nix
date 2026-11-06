@@ -14,16 +14,32 @@
     zen-browser = fromFlake inputs.zen-browser;
     moscripts = fromFlake inputs.moscripts;
   };
+
+  # nix-community/nix-vscode-extensions' extension sets. Static names over
+  # its overlay, so a consumer of overlays.default that never reads them
+  # never fetches the input. Each extension builds with the fixes nixpkgs
+  # carries for it (native binaries patched for NixOS, claude-code linked
+  # to pkgs.claude-code).
+  vscodeExtensions = final: prev: {
+    inherit
+      (inputs.nix-vscode-extensions.overlays.default final prev)
+      open-vsx
+      open-vsx-release
+      vscode-marketplace
+      vscode-marketplace-release
+      ;
+  };
 in {
   flake.overlays = {
     default = lib.composeManyExtensions [
       (import ../overlays/default.nix)
       thirdParty
+      vscodeExtensions
     ];
     ifstate = import ../overlays/ifstate.nix;
     kubernetes = import ../overlays/kubernetes.nix;
     tools = import ../overlays/tools.nix;
-    vscode-extensions = import ../overlays/vscode-extensions.nix;
+    vscode-extensions = vscodeExtensions;
     third-party = thirdParty;
   };
 }

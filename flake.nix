@@ -39,6 +39,16 @@
       url = "https://flakehub.com/f/andrewthomaslee/moscripts/*";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # ------ VS Code extensions (overlays.vscode-extensions) ------ #
+    # Every VS Code Marketplace and Open VSX extension, re-indexed daily
+    # upstream: `nix flake update nix-vscode-extensions` updates them all.
+    # Lazy: only a consumer that reads pkgs.open-vsx* /
+    # pkgs.vscode-marketplace* fetches and evaluates it.
+    nix-vscode-extensions = {
+      url = "github:nix-community/nix-vscode-extensions";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
