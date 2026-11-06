@@ -23,6 +23,7 @@ in {
     ifstate = import ../overlays/ifstate.nix;
     kubernetes = import ../overlays/kubernetes.nix;
     tools = import ../overlays/tools.nix;
+    vscode-extensions = import ../overlays/vscode-extensions.nix;
     third-party = thirdParty;
   };
 }

@@ -36,10 +36,10 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
   `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
 - **Overlays** — `overlays.default` composes the Kubernetes, IfState,
-  tools and third-party overlays; `overlays.kubernetes`, `overlays.ifstate`,
-  `overlays.tools` and `overlays.third-party` (`zen-browser` and
-  `moscripts`, taken from their own flakes, which are this flake's only
-  non-core inputs) are also
+  tools, VS Code extension and third-party overlays; `overlays.kubernetes`,
+  `overlays.ifstate`, `overlays.tools`, `overlays.vscode-extensions` and
+  `overlays.third-party` (`zen-browser` and `moscripts`, taken from their
+  own flakes, which are this flake's only non-core inputs) are also
   exported separately. Applying the default overlay gives you the pinned
   artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`. The builder
   expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
@@ -182,6 +182,21 @@ overlay adds no flake input to consumers' locks.
 | `kubernetes-mcp-server` | MCP server for Kubernetes and OpenShift |
 | `longhornctl` | Longhorn CLI (release binary, x86_64) |
 | `hcloud-ip` | Hetzner Cloud floating IP CLI (release binary, x86_64) |
+
+## VS Code extensions overlay
+
+`overlays.vscode-extensions` (also in `overlays.default`) adds Open VSX
+extensions that nixpkgs doesn't package to `pkgs.vscode-extensions`, under
+their usual `publisher.name` paths, for VSCodium (external-systems/modules
+`homeModules.vscodium`). They are pinned by version and `.vsix` hash in
+`pkgs/vscode-extensions/open-vsx.nix`; `checks.vscode-extensions` builds
+them. nix-community/nix-vscode-extensions' Open VSX cache
+(`data/cache/open-vsx-latest.json`) lists the hash for a new version.
+
+| Extension | What |
+|---|---|
+| `jeanp413.open-remote-ssh` | Remote development over SSH (VSCodium's Remote - SSH) |
+| `varlock.env-spec-language` | `@env-spec` syntax for `.env.schema` / `.env` files |
 
 `claude-code`, `pi-coding-agent`, `tfctl`, `devenv`, `mcp-nixos` and
 `github-mcp-server` come straight from nixpkgs.

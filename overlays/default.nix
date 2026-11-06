@@ -3,6 +3,7 @@ final: prev:
   (import ./kubernetes.nix)
   (import ./ifstate.nix)
   (import ./tools.nix)
+  (import ./vscode-extensions.nix)
 ])
 final
 prev
