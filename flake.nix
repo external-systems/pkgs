@@ -49,6 +49,22 @@
       url = "github:nix-community/nix-vscode-extensions";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # ------ AI coding agents (overlays.llm-agents) ------ #
+    # numtide/llm-agents.nix: claude-code, pi, kimi-code and opencode v2,
+    # updated daily upstream: `nix flake update llm-agents`. Follows the
+    # org nixpkgs (one nixpkgs), so cache.numtide.com only hits when our
+    # nixpkgs revision matches theirs; otherwise they build locally or on
+    # the remote builder. Lazy: only a consumer that reads one of the
+    # agent packages fetches and evaluates it.
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-parts.follows = "flake-parts";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
   };
 
   outputs = inputs:
