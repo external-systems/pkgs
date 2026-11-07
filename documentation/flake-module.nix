@@ -11,6 +11,7 @@
         {"Org flake standard" = "flake-standard.md";}
         {"Docs and slides" = "docs-and-slides.md";}
         {CI = "ci.md";}
+        {"VM tests" = "vm-tests.md";}
       ];
     };
   };

@@ -18,8 +18,11 @@ in {
       # MkDocs site + reveal.js deck: packages.documentation/slides and
       # the live-preview apps.
       docs = bind ../flakeModules/docs.nix;
-      # treefmt + docs + checks.lock-sync + apps.sync-locks + docs as
-      # checks: the one import every repo's flake.nix needs
+      # NixOS VM tests from vm-tests/*.nix: legacyPackages.vmTests, the
+      # vm-test runner and eval-only checks. Never boots a VM in checks.
+      vmTests = bind ../flakeModules/vm-tests.nix;
+      # treefmt + docs + vmTests + checks.lock-sync + apps.sync-locks +
+      # docs as checks: the one import every repo's flake.nix needs
       # (inputs.org-pkgs.flakeModules.default).
       default = bind ../flakeModules/dev.nix;
       # Old name for default; remove once no repo imports it.

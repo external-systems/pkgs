@@ -60,6 +60,11 @@
       exec = ''nix run .#serve-slides'';
       description = "Live slides preview on 127.0.0.1:8982";
     };
+    # flakeModules.vmTests. Manual only: VM tests never run in CI.
+    vm-test = {
+      exec = ''nix run .#vm-test -- "$@"'';
+      description = "Run NixOS VM tests (vm-test --help)";
+    };
   };
 
   # `devenv up` serves docs and slides side by side.

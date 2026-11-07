@@ -35,8 +35,9 @@ nix flake init -t github:external-systems/pkgs
 |---|---|
 | `flakeModules.treefmt` | alejandra, deadnix, nixf-diagnose, shellcheck, sizelint, statix as treefmt programs: `formatter`, `checks.treefmt` |
 | `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
-| `flakeModules.default` | treefmt, docs, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
-| `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides` scripts, `devenv up` docs + slides processes, `devenv test` gates |
+| `flakeModules.vmTests` | NixOS VM tests from `vm-tests/*.nix`: `legacyPackages.vmTests`, `apps.vm-test`, eval-only checks. See [VM tests](vm-tests.md) |
+| `flakeModules.default` | treefmt, docs, vmTests, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
+| `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides`, `vm-test` scripts, `devenv up` docs + slides processes, `devenv test` gates |
 | `templates.default` | the whole layout for a new repo |
 
 The flake modules are bound to pkgs' own `treefmt-nix` and `reveal-js`
@@ -53,6 +54,7 @@ inputs, so a repo declares neither. They add two small nodes to every
 | `devenv up` | live docs on :8981 and slides on :8982 |
 | `devenv test` | treefmt check and lock sync, no VMs |
 | `sync-locks` | after `nix flake update org-pkgs`: re-pin `devenv.lock` |
+| `vm-test` | NixOS VM tests: `--list`, `<name>`, `--all`, `--remote`, `--driver`. Never in CI |
 
 ## Badges
 
