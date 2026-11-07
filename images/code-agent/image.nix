@@ -243,9 +243,8 @@
       # own terminfo db — verified clear works under a real TERM).
       which
       ncurses
-      # AI coding agents: pi and claude-code from nixpkgs, kimi-code
-      # from this flake's overlay (pkgs/kimi-code). Closures carry
-      # their runtimes.
+      # AI coding agents from this flake's overlays.llm-agents
+      # (numtide/llm-agents.nix). Closures carry their runtimes.
       pi-coding-agent
       kimi-code
       claude-code
@@ -881,7 +880,7 @@
   hmAgentSandboxModule = {lib, ...}: {
     homeSpec.agents = {
       # /opt/skills symlinks stay image-level (see agentDirs).
-      skills.enabled = false;
+      skills.enable = false;
       mcp = {
         # The sandbox pins its own trio (env-mapping credential
         # wrappers + pkgs.mcp-nixos) — the host-oriented toggles
@@ -898,7 +897,7 @@
           sandboxMcpServers;
       };
       pi = {
-        enabled = true;
+        enable = true;
         installPackage = false;
         settings = {
           # The baked skills tree as an explicit resource path
@@ -966,7 +965,7 @@
         appendSystemMd = sandboxContext-pi;
       };
       kimi = {
-        enabled = true;
+        enable = true;
         installPackage = false;
         # snake_case keys: kimi-code 2.1.1 accepts both conventions
         # (camelCase is the legacy alias set), but newer sections
@@ -1053,7 +1052,7 @@
         systemMd = sandboxContext-kimi;
       };
       claude = {
-        enabled = true;
+        enable = true;
         installPackage = false;
         settings = {
           hasCompletedOnboarding = true;
