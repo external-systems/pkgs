@@ -1,0 +1,309 @@
+# NixOS VM tests for every org repo: discovered from vm-tests/*.nix and
+# built with nixosLib.runTest. Tests live in
+# legacyPackages.<system>.vmTests, never in checks: GitHub Actions has no
+# KVM and never boots a VM. They run only by hand, through `vm-test`
+# (apps.vm-test, devenv script), on a local KVM machine or the remote
+# builder. `nix flake check` gets eval-only checks instead: every test
+# evaluates, its VMs fit the resource caps, and no check needs KVM.
+#
+# A repo without a vm-tests/ dir and without vmTests.tests gets only the
+# vm-test app (which lists nothing) and no checks or legacyPackages.
+_: {
+  config,
+  lib,
+  self,
+  inputs,
+  ...
+}: let
+  inherit (lib) mkOption types;
+  cfg = config.vmTests;
+
+  # Regular *.nix files; `_`- and `.`-prefixed files are helpers.
+  isTestFile = name: type:
+    type
+    == "regular"
+    && lib.hasSuffix ".nix" name
+    && !(lib.hasPrefix "_" name)
+    && !(lib.hasPrefix "." name);
+
+  dirTests =
+    lib.optionalAttrs (cfg.dir != null && builtins.pathExists cfg.dir)
+    (lib.mapAttrs' (file: _: lib.nameValuePair (lib.removeSuffix ".nix" file) (cfg.dir + "/${file}"))
+      (lib.filterAttrs isTestFile (builtins.readDir cfg.dir)));
+
+  testModules = dirTests // cfg.tests;
+  hasTests = testModules != {};
+in {
+  key = "external-systems/pkgs#flakeModules.vmTests";
+
+  options.vmTests = {
+    dir = mkOption {
+      type = types.nullOr types.path;
+      default = "${self}/vm-tests";
+      defaultText = lib.literalExpression ''"''${self}/vm-tests"'';
+      description = ''
+        Directory of test files. Every regular `*.nix` file not starting
+        with `_` or `.` is one test (a `nixosLib.runTest` module), named
+        by its basename. A missing directory means no tests. `null`
+        disables discovery.
+      '';
+    };
+
+    tests = mkOption {
+      type = types.attrsOf types.deferredModule;
+      default = {};
+      description = ''
+        Extra tests defined in code, by name: `runTest` modules added to
+        the discovered ones (a name here wins over a file of that name).
+      '';
+    };
+
+    defaults = mkOption {
+      type = types.listOf types.deferredModule;
+      default = [];
+      example = lib.literalExpression "[self.nixosModules.default]";
+      description = ''
+        NixOS modules applied to every node of every test (the test's
+        `defaults`), e.g. the repo's own NixOS modules.
+      '';
+    };
+
+    specialArgs = mkOption {
+      type = types.lazyAttrsOf types.raw;
+      default = {};
+      description = ''
+        Extra arguments for test modules and node modules, on top of
+        `self` and `inputs` (always passed).
+      '';
+    };
+
+    systems = mkOption {
+      type = types.listOf types.str;
+      default = ["x86_64-linux"];
+      description = "Systems the tests are built for.";
+    };
+
+    globalTimeout = mkOption {
+      type = types.ints.positive;
+      default = 30 * 60;
+      description = ''
+        Default `globalTimeout` (seconds) of every test; a test overrides
+        it by setting its own.
+      '';
+    };
+
+    limits = {
+      memorySize = mkOption {
+        type = types.ints.positive;
+        default = 16384;
+        description = "Largest `virtualisation.memorySize` (MiB) one VM may ask for.";
+      };
+      cores = mkOption {
+        type = types.ints.positive;
+        default = 8;
+        description = "Largest `virtualisation.cores` one VM may ask for.";
+      };
+      totalMemorySize = mkOption {
+        type = types.ints.positive;
+        default = 24576;
+        description = "Largest sum of `virtualisation.memorySize` (MiB) over one test's VMs.";
+      };
+    };
+  };
+
+  config.perSystem = {
+    config,
+    pkgs,
+    system,
+    ...
+  }: let
+    args = {inherit self inputs;} // cfg.specialArgs;
+    nixosLib = import (pkgs.path + "/nixos/lib") {inherit lib;};
+
+    mkTest = name: module:
+      nixosLib.runTest {
+        imports = [module];
+        name = lib.mkDefault name;
+        hostPkgs = pkgs;
+        _module.args = args;
+        node.specialArgs = args;
+        defaults.imports = cfg.defaults;
+        # No TCG fallback: a builder without KVM refuses the job instead
+        # of running it emulated for an hour.
+        requiredFeatures.kvm = true;
+        qemu.forceAccel = true;
+        globalTimeout = lib.mkDefault cfg.globalTimeout;
+      };
+
+    enabled = hasTests && lib.elem system cfg.systems;
+    tests = lib.mapAttrs mkTest testModules;
+    names = lib.attrNames testModules;
+
+    # One line per VM over a cap, "" when all fit.
+    violations = lib.concatLists (lib.mapAttrsToList (name: test: let
+      vms = lib.mapAttrs (_: node: node.virtualisation) test.nodes;
+      total = lib.foldl' (sum: vm: sum + vm.memorySize) 0 (lib.attrValues vms);
+    in
+      lib.concatLists (lib.mapAttrsToList (node: vm:
+        lib.optional (vm.memorySize > cfg.limits.memorySize)
+        "${name}: node ${node} memorySize ${toString vm.memorySize} MiB > ${toString cfg.limits.memorySize}"
+        ++ lib.optional (vm.cores > cfg.limits.cores)
+        "${name}: node ${node} cores ${toString vm.cores} > ${toString cfg.limits.cores}")
+      vms)
+      ++ lib.optional (total > cfg.limits.totalMemorySize)
+      "${name}: VMs total ${toString total} MiB > ${toString cfg.limits.totalMemorySize}")
+    tests);
+
+    guardName = "vm-tests-no-kvm-checks";
+    # Every other check; reading names and drv attrs only, never itself.
+    # runTest returns a lazyDerivation that hides requiredSystemFeatures,
+    # so a NixOS test is also recognised by its `driver` passthru.
+    kvmChecks = lib.attrNames (lib.filterAttrs (_: drv: let
+      features = drv.requiredSystemFeatures or drv.drvAttrs.requiredSystemFeatures or [];
+    in
+      drv ? driver || lib.elem "kvm" features || lib.elem "nixos-test" features) (removeAttrs config.checks [guardName]));
+
+    vm-test = pkgs.writeShellApplication {
+      name = "vm-test";
+      runtimeInputs = [pkgs.git pkgs.coreutils];
+      text = ''
+        tests=(${lib.escapeShellArgs names})
+        system=${lib.escapeShellArg system}
+
+        usage() {
+          cat <<'EOF'
+        vm-test: run this repo's NixOS VM tests (legacyPackages.<system>.vmTests).
+
+          vm-test --list
+          vm-test <name> [--remote] [--rebuild] [-- <nix build args>]
+          vm-test --all  [--remote] [-- <nix build args>]
+          vm-test <name> --driver [--keep-state] [--interactive]
+
+          --list         List the tests.
+          <name>         Build the test in the Nix sandbox; the exit code is the result.
+          --all          Build every test (vmTestsAll), --keep-going.
+          --remote       Build only on the daemon's remote builders (--max-jobs 0).
+          --rebuild      Run a test that already passed again.
+          --driver       Run the test driver on this machine, outside the sandbox.
+          --keep-state   Driver: keep and reuse VM disk state between runs.
+          --interactive  Driver: the Python REPL against live VMs.
+
+        Logs and driver output: .vm-tests/<name>/ in the repo root.
+        VM tests never run in GitHub Actions or nix flake check.
+        EOF
+        }
+
+        target="" all=0 remote=0 rebuild=0 driver=0 keep=0 interactive=0
+        extra=()
+        while [ $# -gt 0 ]; do
+          case "$1" in
+            -h | --help) usage; exit 0 ;;
+            --list) printf '%s\n' "''${tests[@]}"; exit 0 ;;
+            --all) all=1 ;;
+            --remote) remote=1 ;;
+            --rebuild) rebuild=1 ;;
+            --driver) driver=1 ;;
+            --keep-state) keep=1 ;;
+            --interactive) interactive=1 ;;
+            --) shift; extra=("$@"); break ;;
+            -*) echo "vm-test: unknown flag $1" >&2; usage >&2; exit 2 ;;
+            *) target=$1 ;;
+          esac
+          shift
+        done
+
+        if [ ''${#tests[@]} -eq 0 ]; then
+          echo "vm-test: this repo has no VM tests for $system (vm-tests/*.nix)" >&2
+          exit 1
+        fi
+        if [ "$all" = 1 ] && [ -n "$target" ]; then
+          echo "vm-test: give a test name or --all, not both" >&2; exit 2
+        fi
+        if [ "$all" = 0 ] && [ -z "$target" ]; then
+          usage >&2; exit 2
+        fi
+        if [ -n "$target" ] && ! printf '%s\n' "''${tests[@]}" | grep -qxF -- "$target"; then
+          echo "vm-test: no test '$target'; tests: ''${tests[*]}" >&2; exit 2
+        fi
+
+        root=$(git rev-parse --show-toplevel)
+        flake="$root#legacyPackages.$system"
+
+        if [ "$driver" = 1 ]; then
+          [ -n "$target" ] || { echo "vm-test: --driver needs a test name" >&2; exit 2; }
+          out="$root/.vm-tests/$target"
+          mkdir -p "$out"
+          # driverInteractive always adds --interactive; plain runs use driver.
+          kind=driver
+          [ "$interactive" = 1 ] && kind=driverInteractive
+          drv=$(nix build --no-link --print-out-paths "$flake.vmTests.$target.$kind")
+          flags=(--output_directory "$out" --junit-xml junit.xml)
+          [ "$keep" = 1 ] && flags+=(--keep-machine-state)
+          echo "vm-test: driver output in $out" >&2
+          "$drv/bin/nixos-test-driver" "''${flags[@]}" 2>&1 | tee "$out/driver.log"
+          exit "''${PIPESTATUS[0]}"
+        fi
+
+        build=(-L --keep-going)
+        [ "$remote" = 1 ] && build+=(--max-jobs 0)
+        if [ "$all" = 1 ]; then
+          name=_all attr="$flake.vmTestsAll"
+        else
+          name=$target attr="$flake.vmTests.$target"
+          # --rebuild needs an existing output; on a first run it is a no-op.
+          if [ "$rebuild" = 1 ] && nix path-info "$attr" >/dev/null 2>&1; then
+            build+=(--rebuild)
+          fi
+        fi
+        out="$root/.vm-tests/$name"
+        mkdir -p "$out"
+        echo "vm-test: building $attr (log: $out/build.log)" >&2
+        set +e
+        nix build "''${build[@]}" -o "$out/result" "''${extra[@]}" "$attr" 2>&1 | tee "$out/build.log"
+        status=''${PIPESTATUS[0]}
+        set -e
+        if [ "$status" = 0 ]; then echo "vm-test: $name passed" >&2; else echo "vm-test: $name FAILED ($status)" >&2; fi
+        exit "$status"
+      '';
+    };
+  in {
+    apps.vm-test = {
+      type = "app";
+      program = lib.getExe vm-test;
+      meta.description = "Run the repo's NixOS VM tests (locally or on the remote builder)";
+    };
+
+    legacyPackages = lib.mkIf enabled {
+      vmTests = tests;
+      # One target for batch runs: `vm-test --all --remote`.
+      vmTestsAll = pkgs.linkFarm "vm-tests-all" tests;
+    };
+
+    # Eval-only: nothing here boots QEMU or needs KVM.
+    checks = lib.mkIf enabled {
+      vm-tests-eval = pkgs.writeText "vm-tests-eval" (lib.concatLines (lib.mapAttrsToList
+        (name: test: "${name} ${builtins.unsafeDiscardStringContext test.drvPath}")
+        tests));
+
+      vm-tests-resources = pkgs.runCommand "vm-tests-resources" {} (
+        if violations == []
+        then "touch $out"
+        else ''
+          echo "VM tests over the resource caps (vmTests.limits):" >&2
+          ${lib.concatLines (map (v: "echo ${lib.escapeShellArg "  ${v}"} >&2") violations)}
+          exit 1
+        ''
+      );
+
+      ${guardName} = pkgs.runCommand guardName {} (
+        if kvmChecks == []
+        then "touch $out"
+        else ''
+          echo "checks that need KVM (VM tests belong in legacyPackages.vmTests):" >&2
+          ${lib.concatLines (map (c: "echo ${lib.escapeShellArg "  ${c}"} >&2") kvmChecks)}
+          exit 1
+        ''
+      );
+    };
+  };
+}

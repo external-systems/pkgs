@@ -3,3 +3,5 @@ result
 .direnv
 .devenv*
 devenv.local.nix
+# vm-test logs and driver output.
+.vm-tests/
