@@ -36,8 +36,8 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
   `x86_64-linux` and `aarch64-linux`:
   `nix build github:external-systems/pkgs#rke2`
 - **Overlays** — `overlays.default` composes the Kubernetes, IfState,
-  tools, VS Code extension and third-party overlays; `overlays.kubernetes`,
-  `overlays.ifstate`, `overlays.tools`, `overlays.vscode-extensions`
+  tools, Odoo, VS Code extension and third-party overlays; `overlays.kubernetes`,
+  `overlays.ifstate`, `overlays.tools`, `overlays.odoo`, `overlays.vscode-extensions`
   (nix-community/nix-vscode-extensions) and `overlays.third-party`
   (`zen-browser` and `moscripts`, taken from their own flakes; with
   nix-vscode-extensions, this flake's only non-core inputs) are also
@@ -186,6 +186,16 @@ overlay adds no flake input to consumers' locks.
 
 `tfctl`, `devenv`, `mcp-nixos` and `github-mcp-server` come straight from
 nixpkgs.
+
+## Odoo overlay
+
+`overlays.odoo` (also in `overlays.default`, and as `packages.<system>.odoo19`)
+replaces nixpkgs' `odoo19`, which does not evaluate or build as shipped:
+its `pypdf2` dependency is marked insecure, and its `makeWrapperArgs` break
+the wrapper. The fixed package uses `pypdf` (Odoo 19 has a backend for it)
+and passes the wrapper arguments correctly. Each fix is documented in
+`pkgs/odoo/package.nix` and drops once nixpkgs carries it.
+external-systems/modules `hostSpec.services.odoo` runs it.
 
 ## AI coding agents overlay
 
