@@ -168,8 +168,8 @@
     alejandra
     statix
     deadnix
-    # AI coding agents: pi and claude-code from nixpkgs, kimi-code from
-    # external-systems/pkgs' overlay. (clan-cli is no longer baked: it
+    # AI coding agents from external-systems/pkgs' overlays.llm-agents
+    # (numtide/llm-agents.nix). (clan-cli is no longer baked: it
     # needs clan-core, which pkgs does not depend on.)
     pi-coding-agent
     kimi-code

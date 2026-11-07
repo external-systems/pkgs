@@ -29,13 +29,38 @@
       vscode-marketplace-release
       ;
   };
+  # numtide/llm-agents.nix's AI coding agents, built against the
+  # consumer's nixpkgs (its shared-nixpkgs overlay) and put in place of
+  # the nixpkgs attrs every consumer already reads, so modules and the
+  # code-agent image get the latest release without renaming anything.
+  # The whole set stays reachable as pkgs.llm-agents. Static names, so a
+  # consumer that never reads them never fetches the input.
+  llmAgents = final: prev: let
+    agents = (inputs.llm-agents.overlays.shared-nixpkgs final prev).llm-agents;
+  in {
+    llm-agents = agents;
+    inherit (agents) claude-code;
+    inherit (agents) kimi-code;
+    pi-coding-agent = agents.pi;
+    # opencode v2 only: upstream installs the v2 binary as `opencode2` so
+    # it can sit next to v1; the org runs v2 alone, under its real name.
+    opencode = final.symlinkJoin {
+      pname = "opencode";
+      inherit (agents.opencode2) version;
+      paths = [agents.opencode2];
+      postBuild = "ln -s $out/bin/opencode2 $out/bin/opencode";
+      meta = agents.opencode2.meta // {mainProgram = "opencode";};
+    };
+  };
 in {
   flake.overlays = {
     default = lib.composeManyExtensions [
       (import ../overlays/default.nix)
       thirdParty
       vscodeExtensions
+      llmAgents
     ];
+    llm-agents = llmAgents;
     ifstate = import ../overlays/ifstate.nix;
     kubernetes = import ../overlays/kubernetes.nix;
     tools = import ../overlays/tools.nix;

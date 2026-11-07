@@ -14,6 +14,12 @@
     tools =
       lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
       (lib.getAttrs (lib.attrNames (import ../overlays/tools.nix {} {})) artifactPkgs);
+
+    # The AI coding agents from overlays.llm-agents, buildable directly
+    # (nix build .#claude-code) like the tools.
+    agents =
+      lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
+      (lib.getAttrs ["claude-code" "kimi-code" "opencode" "pi-coding-agent"] artifactPkgs);
   in {
     packages =
       {
@@ -30,6 +36,7 @@
           k3s_1_37
           ;
       }
-      // tools;
+      // tools
+      // agents;
   };
 }

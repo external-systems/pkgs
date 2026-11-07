@@ -178,14 +178,33 @@ overlay adds no flake input to consumers' locks.
 | Package | What |
 |---|---|
 | `headroom`, `headroom-slim` | Context compression proxy + MCP server for AI agents (x86_64 wheel) |
-| `kimi-code` | Moonshot's Kimi Code CLI, from source (ported from numtide/llm-agents.nix) |
 | `artifacthub-mcp` | MCP server for Artifact Hub (Helm charts) |
 | `kubernetes-mcp-server` | MCP server for Kubernetes and OpenShift |
 | `longhornctl` | Longhorn CLI (release binary, x86_64) |
 | `hcloud-ip` | Hetzner Cloud floating IP CLI (release binary, x86_64) |
 
-`claude-code`, `pi-coding-agent`, `tfctl`, `devenv`, `mcp-nixos` and
-`github-mcp-server` come straight from nixpkgs.
+`tfctl`, `devenv`, `mcp-nixos` and `github-mcp-server` come straight from
+nixpkgs.
+
+## AI coding agents overlay
+
+`overlays.llm-agents` (also in `overlays.default`, and as
+`packages.<system>.*`) takes the agents from
+[numtide/llm-agents.nix](https://github.com/numtide/llm-agents.nix),
+updated daily upstream, built against the org nixpkgs (its
+`shared-nixpkgs` overlay). They replace the nixpkgs attributes consumers
+already read:
+
+| Package | From llm-agents.nix |
+|---|---|
+| `claude-code` | `claude-code` |
+| `pi-coding-agent` | `pi` |
+| `kimi-code` | `kimi-code` |
+| `opencode` | `opencode2` (v2 only), installed as `bin/opencode` |
+
+The full set is `pkgs.llm-agents.<name>`. Update with
+`nix flake update llm-agents`. The input follows the org nixpkgs, so
+cache.numtide.com only hits when the nixpkgs revisions match.
 
 ## VS Code extensions overlay
 
