@@ -63,6 +63,7 @@ in {
     llm-agents = llmAgents;
     ifstate = import ../overlays/ifstate.nix;
     kubernetes = import ../overlays/kubernetes.nix;
+    odoo = import ../overlays/odoo.nix;
     tools = import ../overlays/tools.nix;
     vscode-extensions = vscodeExtensions;
     third-party = thirdParty;
