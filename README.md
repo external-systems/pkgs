@@ -209,6 +209,7 @@ already read:
 | Package | From llm-agents.nix |
 |---|---|
 | `claude-code` | `claude-code` |
+| `claude-desktop` | `claude-desktop`: Anthropic's official Linux `.deb` in an FHS env, Cowork's OVMF firmware and virtiofsd included (QEMU comes from the host `PATH`) |
 | `pi-coding-agent` | `pi` |
 | `kimi-code` | `kimi-code` |
 | `opencode` | `opencode2` (v2 only), installed as `bin/opencode` |

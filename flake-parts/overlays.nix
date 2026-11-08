@@ -39,8 +39,7 @@
     agents = (inputs.llm-agents.overlays.shared-nixpkgs final prev).llm-agents;
   in {
     llm-agents = agents;
-    inherit (agents) claude-code;
-    inherit (agents) kimi-code;
+    inherit (agents) claude-code claude-desktop kimi-code;
     pi-coding-agent = agents.pi;
     # opencode v2 only: upstream installs the v2 binary as `opencode2` so
     # it can sit next to v1; the org runs v2 alone, under its real name.

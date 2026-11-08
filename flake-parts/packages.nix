@@ -19,7 +19,7 @@
     # (nix build .#claude-code) like the tools.
     agents =
       lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
-      (lib.getAttrs ["claude-code" "kimi-code" "opencode" "pi-coding-agent"] artifactPkgs);
+      (lib.getAttrs ["claude-code" "claude-desktop" "kimi-code" "opencode" "pi-coding-agent"] artifactPkgs);
   in {
     packages =
       {
