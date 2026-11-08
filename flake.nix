@@ -51,7 +51,7 @@
     };
 
     # ------ AI coding agents (overlays.llm-agents) ------ #
-    # numtide/llm-agents.nix: claude-code, pi, kimi-code and opencode v2,
+    # numtide/llm-agents.nix: claude-code, claude-desktop, pi, kimi-code and opencode v2,
     # updated daily upstream: `nix flake update llm-agents`. Follows the
     # org nixpkgs (one nixpkgs), so cache.numtide.com only hits when our
     # nixpkgs revision matches theirs; otherwise they build locally or on
