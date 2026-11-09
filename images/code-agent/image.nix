@@ -614,13 +614,13 @@
   # Claude-Code-shaped requests, so headroom's raw-API LLM transforms
   # would 400 "credit balance too low" — without a key headroom falls
   # back to its local structural compressors, which is where the bulk
-  # of the savings are anyway. headroom-slim (core+proxy+mcp)
-  # is enough for the MCP server and keeps the image closure small.
+  # of the savings are anyway. headroom-lean (upstream's torch-free
+  # profile) is enough for the MCP server and keeps the image closure small.
   sandboxHeadroom = pkgs.writeShellScriptBin "headroom" ''
     if [ -z "''${ANTHROPIC_API_KEY:-}" ] && [ -n "''${ANTHROPIC_AUTH_TOKEN:-}" ]; then
       export ANTHROPIC_API_KEY="$ANTHROPIC_AUTH_TOKEN"
     fi
-    exec ${lib.getExe pkgs.headroom-slim} "$@"
+    exec ${lib.getExe pkgs.headroom-lean} "$@"
   '';
 
   # MCP servers baked into ALL sandbox agents' user configs (pi
@@ -692,7 +692,7 @@
   # subscription, Moonshot's native kimi-code wire).
   # --stateless: no filesystem writes (containerized mode; the CCR
   # store + stats live in memory for the sandbox's lifetime).
-  # --disable-kompress: the image ships headroom-slim (no [ml]
+  # --disable-kompress: the image ships headroom-lean (no [ml]
   # extra), and kompress's ModernBERT model downloads from
   # huggingface.co, which the sandbox policy deliberately does NOT
   # admit — without the flag the proxy idles "degraded" on every

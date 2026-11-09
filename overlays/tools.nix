@@ -6,8 +6,6 @@
 final: _prev: {
   artifacthub-mcp = final.callPackage ../pkgs/artifacthub-mcp/package.nix {};
   hcloud-ip = final.callPackage ../pkgs/hcloud-ip/package.nix {};
-  headroom = final.callPackage ../pkgs/headroom/package.nix {};
-  headroom-slim = final.callPackage ../pkgs/headroom/package.nix {slim = true;};
   kubernetes-mcp-server = final.callPackage ../pkgs/kubernetes-mcp-server/package.nix {};
   longhornctl = final.callPackage ../pkgs/longhornctl/package.nix {};
 }

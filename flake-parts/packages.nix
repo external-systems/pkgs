@@ -10,7 +10,7 @@
     artifactPkgs = pkgs.extend self.overlays.default;
 
     # overlays.tools, minus what this system cannot build (the release
-    # binaries and the headroom wheel are x86_64-linux only).
+    # binaries are x86_64-linux only).
     tools =
       lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
       (lib.getAttrs (lib.attrNames (import ../overlays/tools.nix {} {})) artifactPkgs);
@@ -20,6 +20,11 @@
     agents =
       lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
       (lib.getAttrs ["claude-code" "claude-desktop" "kimi-code" "opencode" "pi-coding-agent"] artifactPkgs);
+
+    # The uv2nix Python apps from overlays.python-apps (Linux only).
+    pythonApps =
+      lib.filterAttrs (_: lib.meta.availableOn pkgs.stdenv.hostPlatform)
+      (lib.getAttrs ["headroom" "headroom-lean" "headroom-sandbox"] artifactPkgs);
   in {
     packages =
       {
@@ -38,6 +43,7 @@
           ;
       }
       // tools
-      // agents;
+      // agents
+      // pythonApps;
   };
 }
