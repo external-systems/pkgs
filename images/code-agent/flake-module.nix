@@ -20,7 +20,7 @@
     import ./image.nix {
       inherit inputs self config;
       # One nixpkgs: this flake's nixpkgs plus its own overlay
-      # (headroom-slim, kimi-code, artifacthub-mcp, ...). claude-code is
+      # (headroom-lean, kimi-code, artifacthub-mcp, ...). claude-code is
       # the image's only unfree package.
       pkgs = import inputs.nixpkgs {
         inherit system;

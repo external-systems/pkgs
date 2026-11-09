@@ -37,7 +37,8 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
   `nix build github:external-systems/pkgs#rke2`
 - **Overlays** — `overlays.default` composes the Kubernetes, IfState,
   tools, Odoo, VS Code extension and third-party overlays; `overlays.kubernetes`,
-  `overlays.ifstate`, `overlays.tools`, `overlays.odoo`, `overlays.vscode-extensions`
+  `overlays.ifstate`, `overlays.tools`, `overlays.odoo`, `overlays.python-apps`,
+  `overlays.vscode-extensions`
   (nix-community/nix-vscode-extensions) and `overlays.third-party`
   (`zen-browser` and `moscripts`, taken from their own flakes; with
   nix-vscode-extensions, this flake's only non-core inputs) are also
@@ -178,7 +179,6 @@ overlay adds no flake input to consumers' locks.
 
 | Package | What |
 |---|---|
-| `headroom`, `headroom-slim` | Context compression proxy + MCP server for AI agents (x86_64 wheel) |
 | `artifacthub-mcp` | MCP server for Artifact Hub (Helm charts) |
 | `kubernetes-mcp-server` | MCP server for Kubernetes and OpenShift |
 | `longhornctl` | Longhorn CLI (release binary, x86_64) |
@@ -186,6 +186,25 @@ overlay adds no flake input to consumers' locks.
 
 `tfctl`, `devenv`, `mcp-nixos` and `github-mcp-server` come straight from
 nixpkgs.
+
+## Python apps overlay
+
+`overlays.python-apps` (also in `overlays.default`, and as
+`packages.<system>.*` on Linux) builds Python apps with uv2nix from a uv
+wrapper project vendored next to each `package.nix`
+(`pyproject.toml` pins the app, `uv.lock` pins every dependency), against
+the consumer's nixpkgs and `python313`. It closes over this flake's
+`uv2nix`, `pyproject-nix` and `pyproject-build-systems` inputs, lazily.
+
+| Package | What |
+|---|---|
+| `headroom` | headroom-ai, context compression proxy + MCP server for AI agents: upstream's `all` profile (torch, CPU build) |
+| `headroom-lean` | headroom's torch-free `lean` profile: `all` minus image, ml, memory, evals and voice |
+| `headroom-sandbox` | upstream's deprecated alias of `lean`, kept while modules default to it |
+
+Upgrade: bump the pin in `pkgs/headroom/pyproject.toml`, run `uv lock` in
+that directory (`nix shell --inputs-from . nixpkgs#uv nixpkgs#python313`),
+then build all three and their `passthru.tests` (`help`, `proxy`).
 
 ## Odoo overlay
 

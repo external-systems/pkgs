@@ -51,6 +51,22 @@
       meta = agents.opencode2.meta // {mainProgram = "opencode";};
     };
   };
+
+  # Python apps built with uv2nix from a uv project vendored next to their
+  # package.nix, against the consumer's nixpkgs. Closes over the uv2nix
+  # inputs; lazy, so a consumer that never reads them never fetches them.
+  # headroom: one attr per upstream dependency profile (headroom-ai extra).
+  pythonApps = final: _prev: let
+    headroom = profile:
+      final.callPackage ../pkgs/headroom/package.nix {
+        inherit profile;
+        inherit (inputs) uv2nix pyproject-nix pyproject-build-systems;
+      };
+  in {
+    headroom = headroom "all";
+    headroom-lean = headroom "lean";
+    headroom-sandbox = headroom "sandbox";
+  };
 in {
   flake.overlays = {
     default = lib.composeManyExtensions [
@@ -58,11 +74,13 @@ in {
       thirdParty
       vscodeExtensions
       llmAgents
+      pythonApps
     ];
     llm-agents = llmAgents;
     ifstate = import ../overlays/ifstate.nix;
     kubernetes = import ../overlays/kubernetes.nix;
     odoo = import ../overlays/odoo.nix;
+    python-apps = pythonApps;
     tools = import ../overlays/tools.nix;
     vscode-extensions = vscodeExtensions;
     third-party = thirdParty;

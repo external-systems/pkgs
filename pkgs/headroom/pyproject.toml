@@ -1,0 +1,45 @@
+# Wrapper uv project for headroom-ai (third-party app): no build system,
+# so uv locks it as a virtual project. package.nix picks each profile's
+# extras per venv; the headroom-ai dependency below names them all so
+# uv.lock holds every package any profile needs.
+# Upgrade: bump the pin here, then `uv lock` in this directory.
+[project]
+name = "headroom-wrapper"
+version = "0.0.0"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "headroom-ai[all,lean,sandbox]==0.43.1",
+  # Direct only so [tool.uv.sources] can route it to the CPU index;
+  # each profile's venv takes torch only through headroom's extras.
+  "torch",
+]
+
+[tool.uv]
+# Linux only: package.nix sets meta.platforms to match.
+environments = ["sys_platform == 'linux'"]
+# Upstream's own lock settings (headroom pyproject.toml [tool.uv] at
+# v0.43.1): a dependency's [tool.uv] does not reach our lock, so its
+# security floors and the Pillow 13 override are repeated here.
+constraint-dependencies = [
+  "certifi>=2026.10.19",
+  "pygments>=2.20.0",
+  "pydantic-settings>=2.14.2",
+  "lxml-html-clean>=0.4.5",
+  "transformers>=5.5.0",
+  "setuptools>=84.1.0",
+  "filelock>=4.2.1",
+  "aiohttp>=3.14.4",
+  "cryptography>=50.0.0",
+]
+override-dependencies = ["pillow>=13.0.0"]
+
+# CPU-only torch (the [ml]/[memory]/[voice] extras of `all`): the PyPI
+# wheel is the CUDA build, which drags multi-GB nvidia-* wheels into the
+# closure for GPUs the org's machines do not have.
+[tool.uv.sources]
+torch = {index = "pytorch-cpu"}
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
