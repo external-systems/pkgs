@@ -14,6 +14,12 @@
 
     # Consumer-facing inputs only; each follows nixpkgs/flake-parts.
     # No dev/flake.nix: formatting, docs and slides come from org-pkgs.
+
+    # Python (uv2nix): follow the org pins, here and in devenv.yaml,
+    # instead of declaring your own (see the uv2nix skill):
+    #   pyproject-nix.follows = "org-pkgs/pyproject-nix";
+    #   uv2nix.follows = "org-pkgs/uv2nix";
+    #   pyproject-build-systems.follows = "org-pkgs/pyproject-build-systems";
   };
 
   outputs = inputs:
