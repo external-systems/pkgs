@@ -65,6 +65,33 @@
         treefmt-nix.follows = "treefmt-nix";
       };
     };
+
+    # ------ Python: uv.lock -> Nix (uv2nix) ------ #
+    # One org pin for uv2nix, pyproject.nix and build-system-pkgs. Python
+    # repos follow these (`uv2nix.follows = "org-pkgs/uv2nix"` and the
+    # other two, in flake.nix and devenv.yaml) so `sync-locks` keeps them
+    # aligned; see the uv2nix skill. Lazy: nothing here reads them yet, and
+    # a consumer that never reads them never fetches them.
+    # Upgrade: `nix flake update pyproject-nix uv2nix pyproject-build-systems`.
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    uv2nix = {
+      url = "github:pyproject-nix/uv2nix";
+      inputs = {
+        pyproject-nix.follows = "pyproject-nix";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
+    pyproject-build-systems = {
+      url = "github:pyproject-nix/build-system-pkgs";
+      inputs = {
+        pyproject-nix.follows = "pyproject-nix";
+        uv2nix.follows = "uv2nix";
+        nixpkgs.follows = "nixpkgs";
+      };
+    };
   };
 
   outputs = inputs:
