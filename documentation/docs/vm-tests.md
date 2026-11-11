@@ -90,7 +90,7 @@ Inside the devenv shell (`vm-test`, or `nix run .#vm-test --` anywhere):
 | `vm-test <name> --remote` | the same, only on the remote builders (`--max-jobs 0`) |
 | `vm-test --all --remote` | build every test (`vmTestsAll`) on the remote builder, `--keep-going` |
 | `vm-test --all --serial --remote` | build every test one at a time, each with its own log; for tests too large to run side by side |
-| `vm-test --check` | build the eval and resources checks (`legacyPackages.<system>.vmTestChecks`) |
+| `vm-test --check [<name>]` | check that every test (or one) evaluates and fits the caps, one Nix process per test (`legacyPackages.<system>.vmTestChecks.perTest.<name>`) |
 | `vm-test <name> --rebuild` | run a test that already passed again |
 | `vm-test <name> --driver` | run the driver on this machine, outside the sandbox |
 | `vm-test <name> --driver --keep-state` | reuse VM disks between runs (fast iteration) |
@@ -114,5 +114,7 @@ Evaluating every node of every test can take minutes and several
 gigabytes when a repo has many large tests (clan suites of four or five
 machines each). Such a repo sets `vmTests.flakeChecks.enable = false`:
 `vm-tests-eval` and `vm-tests-resources` leave `checks`, so CI stays
-fast, and run by hand with `vm-test --check` before VM runs.
+fast, and the same checks run by hand with `vm-test --check` before VM
+runs. `--check` evaluates one test per Nix process, so its memory peak
+is that of the largest test, not the sum of all of them.
 `vm-tests-no-kvm-checks` always stays in `checks`.
