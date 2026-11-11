@@ -164,7 +164,7 @@ in {
     names = lib.attrNames testModules;
 
     # One line per VM over a cap, "" when all fit.
-    violations = lib.concatLists (lib.mapAttrsToList (name: test: let
+    violationsOf = name: test: let
       vms = lib.mapAttrs (_: node: node.virtualisation) test.nodes;
       sumOf = attr: lib.foldl' (sum: vm: sum + vm.${attr}) 0 (lib.attrValues vms);
       total = sumOf "memorySize";
@@ -179,26 +179,40 @@ in {
       ++ lib.optional (total > cfg.limits.totalMemorySize)
       "${name}: VMs total ${toString total} MiB > ${toString cfg.limits.totalMemorySize}"
       ++ lib.optional (totalCores > cfg.limits.totalCores)
-      "${name}: VMs total ${toString totalCores} cores > ${toString cfg.limits.totalCores}")
-    tests);
+      "${name}: VMs total ${toString totalCores} cores > ${toString cfg.limits.totalCores}";
+    violations = lib.concatLists (lib.mapAttrsToList violationsOf tests);
+
+    failOn = name: env: lines:
+      pkgs.runCommand name env (
+        if lines == []
+        then "touch $out"
+        else ''
+          echo "VM tests over the resource caps (vmTests.limits):" >&2
+          ${lib.concatLines (map (v: "echo ${lib.escapeShellArg "  ${v}"} >&2") lines)}
+          exit 1
+        ''
+      );
 
     # Eval-only: nothing here boots QEMU or needs KVM. In `checks` unless
     # vmTests.flakeChecks.enable is false; always in legacyPackages for
-    # `vm-test --check`.
+    # `vm-test --check`. `perTest.<name>` checks one test (evaluates and
+    # fits the caps): `vm-test --check` builds them one Nix process at a
+    # time, since evaluating every test of a large repo in one process
+    # can need tens of GB.
     staticChecks = {
+      perTest = lib.mapAttrs (name: test:
+        failOn "vm-tests-check-${name}" {
+          # In the env so instantiating this check evaluates the whole
+          # test; the context is dropped, so the test is never built.
+          testDrv = builtins.unsafeDiscardStringContext test.drvPath;
+        } (violationsOf name test))
+      tests;
+
       eval = pkgs.writeText "vm-tests-eval" (lib.concatLines (lib.mapAttrsToList
         (name: test: "${name} ${builtins.unsafeDiscardStringContext test.drvPath}")
         tests));
 
-      resources = pkgs.runCommand "vm-tests-resources" {} (
-        if violations == []
-        then "touch $out"
-        else ''
-          echo "VM tests over the resource caps (vmTests.limits):" >&2
-          ${lib.concatLines (map (v: "echo ${lib.escapeShellArg "  ${v}"} >&2") violations)}
-          exit 1
-        ''
-      );
+      resources = failOn "vm-tests-resources" {} violations;
     };
 
     guardName = "vm-tests-no-kvm-checks";
@@ -224,7 +238,7 @@ in {
           vm-test --list
           vm-test <name> [--remote] [--rebuild] [-- <nix build args>]
           vm-test --all  [--serial] [--remote] [--rebuild] [-- <nix build args>]
-          vm-test --check
+          vm-test --check [<name>]
           vm-test <name> --driver [--keep-state] [--interactive]
 
           --list         List the tests.
@@ -232,7 +246,8 @@ in {
           --all          Build every test (vmTestsAll), --keep-going.
           --serial       With --all: build the tests one at a time, each with its
                          own log; for tests too large to run side by side.
-          --check        Build the eval and resources checks (vmTestChecks).
+          --check        Check that every test (or <name>) evaluates and fits the
+                         resource caps, one Nix process per test (vmTestChecks.perTest).
           --remote       Build only on the daemon's remote builders (--max-jobs 0).
           --rebuild      Run a test that already passed again.
           --driver       Run the test driver on this machine, outside the sandbox.
@@ -275,8 +290,8 @@ in {
         if [ "$serial" = 1 ] && [ "$all" = 0 ]; then
           echo "vm-test: --serial needs --all" >&2; exit 2
         fi
-        if [ "$check" = 1 ] && { [ "$all" = 1 ] || [ -n "$target" ]; }; then
-          echo "vm-test: --check takes no test name and no --all" >&2; exit 2
+        if [ "$check" = 1 ] && [ "$all" = 1 ]; then
+          echo "vm-test: --check checks every test already; drop --all" >&2; exit 2
         fi
         if [ "$all" = 0 ] && [ "$check" = 0 ] && [ -z "$target" ]; then
           usage >&2; exit 2
@@ -288,10 +303,24 @@ in {
         root=$(git rev-parse --show-toplevel)
         flake="$root#legacyPackages.$system"
 
+        # One nix process per test: a large repo's tests together can
+        # need tens of GB to evaluate in a single process.
         if [ "$check" = 1 ]; then
-          echo "vm-test: evaluating every test and its resource caps" >&2
-          nix build --no-link -L "''${extra[@]}" "$flake.vmTestChecks.eval" "$flake.vmTestChecks.resources"
-          exit $?
+          checks=("''${tests[@]}")
+          [ -n "$target" ] && checks=("$target")
+          failed=()
+          for t in "''${checks[@]}"; do
+            echo "vm-test: checking $t" >&2
+            if ! nix build --no-link "''${extra[@]}" "$flake.vmTestChecks.perTest.$t"; then
+              failed+=("$t")
+            fi
+          done
+          if [ ''${#failed[@]} -eq 0 ]; then
+            echo "vm-test: ''${#checks[@]} tests evaluate and fit the caps" >&2
+            exit 0
+          fi
+          echo "vm-test: ''${#failed[@]} of ''${#checks[@]} FAILED the check: ''${failed[*]}" >&2
+          exit 1
         fi
 
         if [ "$driver" = 1 ]; then
