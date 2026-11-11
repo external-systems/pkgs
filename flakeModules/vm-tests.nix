@@ -5,6 +5,10 @@
 # (apps.vm-test, devenv script), on a local KVM machine or the remote
 # builder. `nix flake check` gets eval-only checks instead: every test
 # evaluates, its VMs fit the resource caps, and no check needs KVM.
+# A repo whose tests are expensive to evaluate (many large clan suites)
+# sets `vmTests.flakeChecks.enable = false`: the eval and resources
+# checks then leave `checks` and run by hand with `vm-test --check`;
+# the KVM guard always stays.
 #
 # A repo without a vm-tests/ dir and without vmTests.tests gets only the
 # vm-test app (which lists nothing) and no checks or legacyPackages.
@@ -92,6 +96,17 @@ in {
       '';
     };
 
+    flakeChecks.enable =
+      lib.mkEnableOption ''
+        the eval and resources checks in `checks` (and so in `nix flake
+        check` and CI). Evaluating every node of every test can take
+        minutes and gigabytes; a repo with many large suites turns this
+        off and runs the same checks with `vm-test --check`
+        (`legacyPackages.<system>.vmTestChecks`). The KVM guard
+        (`vm-tests-no-kvm-checks`) is always in `checks`
+      ''
+      // {default = true;};
+
     limits = {
       memorySize = mkOption {
         type = types.ints.positive;
@@ -107,6 +122,15 @@ in {
         type = types.ints.positive;
         default = 24576;
         description = "Largest sum of `virtualisation.memorySize` (MiB) over one test's VMs.";
+      };
+      totalCores = mkOption {
+        type = types.ints.positive;
+        default = 16;
+        description = ''
+          Largest sum of `virtualisation.cores` over one test's VMs. Keep
+          it at or below the thread count of the machine that runs the
+          tests, so one test never oversubscribes it.
+        '';
       };
     };
   };
@@ -142,7 +166,9 @@ in {
     # One line per VM over a cap, "" when all fit.
     violations = lib.concatLists (lib.mapAttrsToList (name: test: let
       vms = lib.mapAttrs (_: node: node.virtualisation) test.nodes;
-      total = lib.foldl' (sum: vm: sum + vm.memorySize) 0 (lib.attrValues vms);
+      sumOf = attr: lib.foldl' (sum: vm: sum + vm.${attr}) 0 (lib.attrValues vms);
+      total = sumOf "memorySize";
+      totalCores = sumOf "cores";
     in
       lib.concatLists (lib.mapAttrsToList (node: vm:
         lib.optional (vm.memorySize > cfg.limits.memorySize)
@@ -151,8 +177,29 @@ in {
         "${name}: node ${node} cores ${toString vm.cores} > ${toString cfg.limits.cores}")
       vms)
       ++ lib.optional (total > cfg.limits.totalMemorySize)
-      "${name}: VMs total ${toString total} MiB > ${toString cfg.limits.totalMemorySize}")
+      "${name}: VMs total ${toString total} MiB > ${toString cfg.limits.totalMemorySize}"
+      ++ lib.optional (totalCores > cfg.limits.totalCores)
+      "${name}: VMs total ${toString totalCores} cores > ${toString cfg.limits.totalCores}")
     tests);
+
+    # Eval-only: nothing here boots QEMU or needs KVM. In `checks` unless
+    # vmTests.flakeChecks.enable is false; always in legacyPackages for
+    # `vm-test --check`.
+    staticChecks = {
+      eval = pkgs.writeText "vm-tests-eval" (lib.concatLines (lib.mapAttrsToList
+        (name: test: "${name} ${builtins.unsafeDiscardStringContext test.drvPath}")
+        tests));
+
+      resources = pkgs.runCommand "vm-tests-resources" {} (
+        if violations == []
+        then "touch $out"
+        else ''
+          echo "VM tests over the resource caps (vmTests.limits):" >&2
+          ${lib.concatLines (map (v: "echo ${lib.escapeShellArg "  ${v}"} >&2") violations)}
+          exit 1
+        ''
+      );
+    };
 
     guardName = "vm-tests-no-kvm-checks";
     # Every other check; reading names and drv attrs only, never itself.
@@ -176,12 +223,16 @@ in {
 
           vm-test --list
           vm-test <name> [--remote] [--rebuild] [-- <nix build args>]
-          vm-test --all  [--remote] [-- <nix build args>]
+          vm-test --all  [--serial] [--remote] [--rebuild] [-- <nix build args>]
+          vm-test --check
           vm-test <name> --driver [--keep-state] [--interactive]
 
           --list         List the tests.
           <name>         Build the test in the Nix sandbox; the exit code is the result.
           --all          Build every test (vmTestsAll), --keep-going.
+          --serial       With --all: build the tests one at a time, each with its
+                         own log; for tests too large to run side by side.
+          --check        Build the eval and resources checks (vmTestChecks).
           --remote       Build only on the daemon's remote builders (--max-jobs 0).
           --rebuild      Run a test that already passed again.
           --driver       Run the test driver on this machine, outside the sandbox.
@@ -193,13 +244,15 @@ in {
         EOF
         }
 
-        target="" all=0 remote=0 rebuild=0 driver=0 keep=0 interactive=0
+        target="" all=0 serial=0 check=0 remote=0 rebuild=0 driver=0 keep=0 interactive=0
         extra=()
         while [ $# -gt 0 ]; do
           case "$1" in
             -h | --help) usage; exit 0 ;;
             --list) printf '%s\n' "''${tests[@]}"; exit 0 ;;
             --all) all=1 ;;
+            --serial) serial=1 ;;
+            --check) check=1 ;;
             --remote) remote=1 ;;
             --rebuild) rebuild=1 ;;
             --driver) driver=1 ;;
@@ -219,7 +272,13 @@ in {
         if [ "$all" = 1 ] && [ -n "$target" ]; then
           echo "vm-test: give a test name or --all, not both" >&2; exit 2
         fi
-        if [ "$all" = 0 ] && [ -z "$target" ]; then
+        if [ "$serial" = 1 ] && [ "$all" = 0 ]; then
+          echo "vm-test: --serial needs --all" >&2; exit 2
+        fi
+        if [ "$check" = 1 ] && { [ "$all" = 1 ] || [ -n "$target" ]; }; then
+          echo "vm-test: --check takes no test name and no --all" >&2; exit 2
+        fi
+        if [ "$all" = 0 ] && [ "$check" = 0 ] && [ -z "$target" ]; then
           usage >&2; exit 2
         fi
         if [ -n "$target" ] && ! printf '%s\n' "''${tests[@]}" | grep -qxF -- "$target"; then
@@ -228,6 +287,12 @@ in {
 
         root=$(git rev-parse --show-toplevel)
         flake="$root#legacyPackages.$system"
+
+        if [ "$check" = 1 ]; then
+          echo "vm-test: evaluating every test and its resource caps" >&2
+          nix build --no-link -L "''${extra[@]}" "$flake.vmTestChecks.eval" "$flake.vmTestChecks.resources"
+          exit $?
+        fi
 
         if [ "$driver" = 1 ]; then
           [ -n "$target" ] || { echo "vm-test: --driver needs a test name" >&2; exit 2; }
@@ -246,6 +311,39 @@ in {
 
         build=(-L --keep-going)
         [ "$remote" = 1 ] && build+=(--max-jobs 0)
+
+        # One test at a time: each a separate nix build, so the builder
+        # never runs two tests side by side. Keeps going; fails at the end.
+        if [ "$serial" = 1 ]; then
+          failed=()
+          for t in "''${tests[@]}"; do
+            args=("''${build[@]}")
+            attr="$flake.vmTests.$t"
+            if [ "$rebuild" = 1 ] && nix path-info "$attr" >/dev/null 2>&1; then
+              args+=(--rebuild)
+            fi
+            out="$root/.vm-tests/$t"
+            mkdir -p "$out"
+            echo "vm-test: building $attr (log: $out/build.log)" >&2
+            set +e
+            nix build "''${args[@]}" -o "$out/result" "''${extra[@]}" "$attr" 2>&1 | tee "$out/build.log"
+            status=''${PIPESTATUS[0]}
+            set -e
+            if [ "$status" = 0 ]; then
+              echo "vm-test: $t passed" >&2
+            else
+              echo "vm-test: $t FAILED ($status)" >&2
+              failed+=("$t")
+            fi
+          done
+          if [ ''${#failed[@]} -eq 0 ]; then
+            echo "vm-test: all ''${#tests[@]} tests passed" >&2
+            exit 0
+          fi
+          echo "vm-test: ''${#failed[@]} of ''${#tests[@]} FAILED: ''${failed[*]}" >&2
+          exit 1
+        fi
+
         if [ "$all" = 1 ]; then
           name=_all attr="$flake.vmTestsAll"
         else
@@ -277,33 +375,24 @@ in {
       vmTests = tests;
       # One target for batch runs: `vm-test --all --remote`.
       vmTestsAll = pkgs.linkFarm "vm-tests-all" tests;
+      # `vm-test --check`, whether or not they are also in checks.
+      vmTestChecks = staticChecks;
     };
 
-    # Eval-only: nothing here boots QEMU or needs KVM.
-    checks = lib.mkIf enabled {
-      vm-tests-eval = pkgs.writeText "vm-tests-eval" (lib.concatLines (lib.mapAttrsToList
-        (name: test: "${name} ${builtins.unsafeDiscardStringContext test.drvPath}")
-        tests));
-
-      vm-tests-resources = pkgs.runCommand "vm-tests-resources" {} (
-        if violations == []
-        then "touch $out"
-        else ''
-          echo "VM tests over the resource caps (vmTests.limits):" >&2
-          ${lib.concatLines (map (v: "echo ${lib.escapeShellArg "  ${v}"} >&2") violations)}
-          exit 1
-        ''
-      );
-
-      ${guardName} = pkgs.runCommand guardName {} (
-        if kvmChecks == []
-        then "touch $out"
-        else ''
-          echo "checks that need KVM (VM tests belong in legacyPackages.vmTests):" >&2
-          ${lib.concatLines (map (c: "echo ${lib.escapeShellArg "  ${c}"} >&2") kvmChecks)}
-          exit 1
-        ''
-      );
-    };
+    checks = lib.mkIf enabled (lib.optionalAttrs cfg.flakeChecks.enable {
+        vm-tests-eval = staticChecks.eval;
+        vm-tests-resources = staticChecks.resources;
+      }
+      // {
+        ${guardName} = pkgs.runCommand guardName {} (
+          if kvmChecks == []
+          then "touch $out"
+          else ''
+            echo "checks that need KVM (VM tests belong in legacyPackages.vmTests):" >&2
+            ${lib.concatLines (map (c: "echo ${lib.escapeShellArg "  ${c}"} >&2") kvmChecks)}
+            exit 1
+          ''
+        );
+      });
   };
 }

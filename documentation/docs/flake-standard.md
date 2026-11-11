@@ -54,7 +54,7 @@ inputs, so a repo declares neither. They add two small nodes to every
 | `devenv up` | live docs on :8981 and slides on :8982 |
 | `devenv test` | treefmt check and lock sync, no VMs |
 | `sync-locks` | after `nix flake update org-pkgs`: re-pin `devenv.lock` |
-| `vm-test` | NixOS VM tests: `--list`, `<name>`, `--all`, `--remote`, `--driver`. Never in CI |
+| `vm-test` | NixOS VM tests: `--list`, `<name>`, `--all [--serial]`, `--remote`, `--check`, `--driver`. Never in CI |
 
 ## Badges
 

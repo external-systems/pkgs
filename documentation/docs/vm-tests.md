@@ -61,9 +61,20 @@ vmTests = {
   specialArgs = {inherit customLib;};       # extra module args
   systems = ["x86_64-linux"];               # default
   tests.extra = ./tests/extra.nix;          # tests defined in code
-  limits = {memorySize = 16384; cores = 8; totalMemorySize = 24576;};  # defaults
+  limits = {                                # defaults
+    memorySize = 16384;                     # MiB, one VM
+    cores = 8;                              # one VM
+    totalMemorySize = 24576;                # MiB, all VMs of one test
+    totalCores = 16;                        # all VMs of one test
+  };
+  flakeChecks.enable = true;                # eval + resources checks in `checks`
 };
 ```
+
+The default caps fit a 32 GiB, 16-thread machine. A repo whose tests
+need more (several clusters in one topology) raises `limits` with the
+owner's yes and runs those tests on the remote builder, one at a time
+(`vm-test --all --serial --remote`).
 
 `dir` (default `vm-tests/` in the repo root, `null` to disable) sets the
 directory scanned for tests.
@@ -78,6 +89,8 @@ Inside the devenv shell (`vm-test`, or `nix run .#vm-test --` anywhere):
 | `vm-test <name>` | build the test in the Nix sandbox; the exit code is the result |
 | `vm-test <name> --remote` | the same, only on the remote builders (`--max-jobs 0`) |
 | `vm-test --all --remote` | build every test (`vmTestsAll`) on the remote builder, `--keep-going` |
+| `vm-test --all --serial --remote` | build every test one at a time, each with its own log; for tests too large to run side by side |
+| `vm-test --check` | build the eval and resources checks (`legacyPackages.<system>.vmTestChecks`) |
 | `vm-test <name> --rebuild` | run a test that already passed again |
 | `vm-test <name> --driver` | run the driver on this machine, outside the sandbox |
 | `vm-test <name> --driver --keep-state` | reuse VM disks between runs (fast iteration) |
@@ -94,5 +107,12 @@ When a repo has tests, three eval-only checks, safe on any runner:
 | Check | Fails when |
 |---|---|
 | `vm-tests-eval` | a test does not evaluate |
-| `vm-tests-resources` | a VM asks for more than `limits.memorySize` MiB or `limits.cores`, or a test's VMs together more than `limits.totalMemorySize` MiB |
+| `vm-tests-resources` | a VM asks for more than `limits.memorySize` MiB or `limits.cores`, or a test's VMs together more than `limits.totalMemorySize` MiB or `limits.totalCores` cores |
 | `vm-tests-no-kvm-checks` | any check needs KVM: a VM test put into `checks` |
+
+Evaluating every node of every test can take minutes and several
+gigabytes when a repo has many large tests (clan suites of four or five
+machines each). Such a repo sets `vmTests.flakeChecks.enable = false`:
+`vm-tests-eval` and `vm-tests-resources` leave `checks`, so CI stays
+fast, and run by hand with `vm-test --check` before VM runs.
+`vm-tests-no-kvm-checks` always stays in `checks`.
