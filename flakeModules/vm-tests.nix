@@ -226,7 +226,7 @@ in {
 
     vm-test = pkgs.writeShellApplication {
       name = "vm-test";
-      runtimeInputs = [pkgs.git pkgs.coreutils];
+      runtimeInputs = [pkgs.git pkgs.coreutils pkgs.gnugrep pkgs.gnused];
       text = ''
         tests=(${lib.escapeShellArgs names})
         system=${lib.escapeShellArg system}
@@ -236,9 +236,10 @@ in {
         vm-test: run this repo's NixOS VM tests (legacyPackages.<system>.vmTests).
 
           vm-test --list
-          vm-test <name> [--remote] [--rebuild] [-- <nix build args>]
-          vm-test --all  [--serial] [--remote] [--rebuild] [-- <nix build args>]
+          vm-test <name> [--remote] [--rebuild] [--quiet] [-- <nix build args>]
+          vm-test --all  [--serial] [--remote] [--rebuild] [--quiet] [-- <nix build args>]
           vm-test --check [<name>]
+          vm-test --summary <name>
           vm-test <name> --driver [--keep-state] [--interactive]
 
           --list         List the tests.
@@ -253,13 +254,17 @@ in {
           --driver       Run the test driver on this machine, outside the sandbox.
           --keep-state   Driver: keep and reuse VM disk state between runs.
           --interactive  Driver: the Python REPL against live VMs.
+          --quiet        Keep the full build log in the file only; print the summary.
+          --summary      Print the summary of <name>'s last run again (no build).
 
-        Logs and driver output: .vm-tests/<name>/ in the repo root.
+        Every build ends with a summary: each subtest, the failures (!!! lines)
+        and the first build errors (e.g. the test script linter), also saved
+        as summary.txt. Logs and driver output: .vm-tests/<name>/ in the repo root.
         VM tests never run in GitHub Actions or nix flake check.
         EOF
         }
 
-        target="" all=0 serial=0 check=0 remote=0 rebuild=0 driver=0 keep=0 interactive=0
+        target="" all=0 serial=0 check=0 remote=0 rebuild=0 driver=0 keep=0 interactive=0 quiet=0 summary=0
         extra=()
         while [ $# -gt 0 ]; do
           case "$1" in
@@ -273,6 +278,8 @@ in {
             --driver) driver=1 ;;
             --keep-state) keep=1 ;;
             --interactive) interactive=1 ;;
+            --quiet) quiet=1 ;;
+            --summary) summary=1 ;;
             --) shift; extra=("$@"); break ;;
             -*) echo "vm-test: unknown flag $1" >&2; usage >&2; exit 2 ;;
             *) target=$1 ;;
@@ -293,6 +300,9 @@ in {
         if [ "$check" = 1 ] && [ "$all" = 1 ]; then
           echo "vm-test: --check checks every test already; drop --all" >&2; exit 2
         fi
+        if [ "$summary" = 1 ] && [ -z "$target" ]; then
+          echo "vm-test: --summary needs a test name" >&2; exit 2
+        fi
         if [ "$all" = 0 ] && [ "$check" = 0 ] && [ -z "$target" ]; then
           usage >&2; exit 2
         fi
@@ -302,6 +312,56 @@ in {
 
         root=$(git rev-parse --show-toplevel)
         flake="$root#legacyPackages.$system"
+
+        # The lines an agent or a human acts on, out of a build or driver
+        # log: subtests started, failures, and build errors that stop a
+        # test before it boots (the driver's ruff lint, eval errors).
+        summarize() {
+          local log=$1
+          {
+            grep -E '(^|> )subtest: ' "$log" | sed -E 's/^vm-test-run-//; s/^/  /' || true
+            # Not nix's repeat of the last log lines ("  > ..."): each once.
+            grep -E '^(vm-test-run-[^>]*> )?!!! (Test |RequestedAssertionFailed|[A-Za-z]+Error)' "$log" | sed -E 's/^vm-test-run-//' | head -n 20 || true
+            grep -E '^error: |^ *> [A-Z]+[0-9]+ ' "$log" | head -n 8 || true
+            grep -E 'test script finished in' "$log" | sed -E 's/^vm-test-run-//; s/^/  /' | tail -n 1 || true
+          }
+        }
+
+        # Build one attr, keep the log, print and save the summary.
+        run_build() {
+          local name=$1 attr=$2 out=$3
+          shift 3
+          mkdir -p "$out"
+          echo "vm-test: building $attr (log: $out/build.log)" >&2
+          set +e
+          if [ "$quiet" = 1 ]; then
+            nix build "$@" -o "$out/result" "''${extra[@]}" "$attr" > "$out/build.log" 2>&1
+            status=$?
+          else
+            nix build "$@" -o "$out/result" "''${extra[@]}" "$attr" 2>&1 | tee "$out/build.log"
+            status=''${PIPESTATUS[0]}
+          fi
+          set -e
+          summarize "$out/build.log" > "$out/summary.txt"
+          {
+            echo "vm-test: summary of $name ($out/summary.txt)"
+            cat "$out/summary.txt"
+            if [ "$status" = 0 ]; then echo "vm-test: $name passed"; else echo "vm-test: $name FAILED ($status)"; fi
+          } >&2
+          return "$status"
+        }
+
+        if [ "$summary" = 1 ]; then
+          dir="$root/.vm-tests/$target"
+          log="$dir/build.log"
+          [ -f "$log" ] || log="$dir/driver.log"
+          if [ ! -f "$log" ]; then
+            echo "vm-test: no log for $target in $dir" >&2; exit 1
+          fi
+          echo "vm-test: summary of $target ($log)"
+          summarize "$log"
+          exit 0
+        fi
 
         # One nix process per test: a large repo's tests together can
         # need tens of GB to evaluate in a single process.
@@ -334,8 +394,13 @@ in {
           flags=(--output_directory "$out" --junit-xml junit.xml)
           [ "$keep" = 1 ] && flags+=(--keep-machine-state)
           echo "vm-test: driver output in $out" >&2
+          set +e
           "$drv/bin/nixos-test-driver" "''${flags[@]}" 2>&1 | tee "$out/driver.log"
-          exit "''${PIPESTATUS[0]}"
+          status=''${PIPESTATUS[0]}
+          set -e
+          summarize "$out/driver.log" > "$out/summary.txt"
+          { echo "vm-test: summary of $target ($out/summary.txt)"; cat "$out/summary.txt"; } >&2
+          exit "$status"
         fi
 
         build=(-L --keep-going)
@@ -351,17 +416,7 @@ in {
             if [ "$rebuild" = 1 ] && nix path-info "$attr" >/dev/null 2>&1; then
               args+=(--rebuild)
             fi
-            out="$root/.vm-tests/$t"
-            mkdir -p "$out"
-            echo "vm-test: building $attr (log: $out/build.log)" >&2
-            set +e
-            nix build "''${args[@]}" -o "$out/result" "''${extra[@]}" "$attr" 2>&1 | tee "$out/build.log"
-            status=''${PIPESTATUS[0]}
-            set -e
-            if [ "$status" = 0 ]; then
-              echo "vm-test: $t passed" >&2
-            else
-              echo "vm-test: $t FAILED ($status)" >&2
+            if ! run_build "$t" "$attr" "$root/.vm-tests/$t" "''${args[@]}"; then
               failed+=("$t")
             fi
           done
@@ -382,14 +437,8 @@ in {
             build+=(--rebuild)
           fi
         fi
-        out="$root/.vm-tests/$name"
-        mkdir -p "$out"
-        echo "vm-test: building $attr (log: $out/build.log)" >&2
-        set +e
-        nix build "''${build[@]}" -o "$out/result" "''${extra[@]}" "$attr" 2>&1 | tee "$out/build.log"
-        status=''${PIPESTATUS[0]}
-        set -e
-        if [ "$status" = 0 ]; then echo "vm-test: $name passed" >&2; else echo "vm-test: $name FAILED ($status)" >&2; fi
+        status=0
+        run_build "$name" "$attr" "$root/.vm-tests/$name" "''${build[@]}" || status=$?
         exit "$status"
       '';
     };

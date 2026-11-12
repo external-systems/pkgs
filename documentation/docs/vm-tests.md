@@ -95,6 +95,15 @@ Inside the devenv shell (`vm-test`, or `nix run .#vm-test --` anywhere):
 | `vm-test <name> --driver` | run the driver on this machine, outside the sandbox |
 | `vm-test <name> --driver --keep-state` | reuse VM disks between runs (fast iteration) |
 | `vm-test <name> --driver --interactive` | Python REPL against live VMs |
+| `vm-test <name> --quiet` | the full log goes to the file only; the summary is printed |
+| `vm-test --summary <name>` | print the summary of `<name>`'s last run again, without building |
+
+Every build and driver run ends with a **summary**: the subtests it
+started, the failures (`!!!` lines) and the first build errors, such as
+the test-script linter (`F401` for an unused import) or an evaluation
+error. It is printed and saved as `.vm-tests/<name>/summary.txt`, so an
+agent reads a dozen lines instead of the full `-L` log; the full log
+stays in `build.log` (or `driver.log`).
 
 Arguments after `--` go to `nix build`. Build logs, the result link and
 driver output (`driver.log`, `junit.xml`, screenshots) land in
