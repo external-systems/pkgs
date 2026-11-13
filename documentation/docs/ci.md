@@ -7,7 +7,7 @@ every repo on its next run, with no PR per repo.
 
 | Job | Runs on | Does |
 |---|---|---|
-| `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix flake check` with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
+| `ci / flake-check` | PRs, merge queue, pushes to `main` | `nix run .#flake-check` (`nix flake check`, failing on dangerous evaluation warnings; see the flake standard) with a warm Nix store; owns the store cache. On `main` pushes it also builds `.#documentation` (a store hit after the check) and uploads the Pages artifact. |
 | `ci / deploy` | pushes to `main`, after the check, unless `pages: false` | Deploys that artifact to GitHub Pages (docs, deck at `/slides/`). `pages: false` skips the Pages build and deploy, for a repo whose docs must not be published (secrets). |
 | `ci / release` | pushes to `main`, after the check | Tags `<major>.<minor>.<commits>` and publishes a GitHub release with generated notes. |
 

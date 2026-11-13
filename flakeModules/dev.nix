@@ -63,6 +63,7 @@ in {
     (import ./treefmt.nix {inherit orgInputs;})
     (import ./docs.nix {inherit orgInputs;})
     (import ./vm-tests.nix {inherit orgInputs;})
+    (import ./eval-warnings.nix {inherit orgInputs;})
   ];
 
   perSystem = {

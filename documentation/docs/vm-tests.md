@@ -100,6 +100,7 @@ Inside the devenv shell (`vm-test`, or `nix run .#vm-test --` anywhere):
 | `vm-test <name> --remote` | the same, only on the remote builders (`--max-jobs 0`) |
 | `vm-test --all --remote` | run every test on the remote builder, side by side within `vmTests.parallel` (see below) |
 | `vm-test --all --serial --remote` | the same, one test at a time |
+| `vm-test --all --remote --rebuild --resume` | continue an interrupted run: skip tests whose last `result.txt` passed for the same test derivation |
 | `vm-test --check [<name>]` | check that every test (or one) evaluates and fits the caps, one Nix process per test (`legacyPackages.<system>.vmTestChecks.perTest.<name>`) |
 | `vm-test <name> --rebuild` | boot a test that already passed again; works with `--remote` and `--all` |
 | `vm-test <name> --driver` | run the driver on this machine, outside the sandbox |
@@ -139,6 +140,12 @@ per-run id (read with `--impure`), because Nix never sends a
    timing-sensitive; its first log is `build-under-load.log`). A test that
    fails alone fails the run.
 
+Each test's `result.txt` is `passed|cached|failed <seconds> <test drv>`.
+`--resume` reads it: a test whose last run passed for the same test
+derivation is reported `PASS … (earlier run, --resume)` and not run
+again, so an `--all` run cut short (a reboot, a lost connection)
+continues where it stopped. A changed test is a new derivation and runs.
+
 The run ends with one line per test: `PASS`, `PASS(!)`, `CACHED` or
 `FAIL`, and exits non-zero on any `FAIL`.
 
@@ -153,7 +160,7 @@ When a repo has tests, three eval-only checks, safe on any runner:
 | Check | Fails when |
 |---|---|
 | `vm-tests-eval` | a test does not evaluate |
-| `vm-tests-resources` | a VM asks for more than `limits.memorySize` MiB or `limits.cores`, or a test's VMs together more than `limits.totalMemorySize` MiB or `limits.totalCores` cores |
+| `vm-tests-resources` | a VM asks for more than `limits.memorySize` MiB or `limits.cores`, or a test's VMs together more than `limits.totalMemorySize` MiB or `limits.totalCores` cores, or a test script pipes into `grep -q` (use `grep PAT >/dev/null`: an early exit SIGPIPEs the writer under the driver's `pipefail`) |
 | `vm-tests-no-kvm-checks` | any check needs KVM: a VM test put into `checks` |
 
 Evaluating every node of every test can take minutes and several
@@ -163,4 +170,10 @@ machines each). Such a repo sets `vmTests.flakeChecks.enable = false`:
 fast, and the same checks run by hand with `vm-test --check` before VM
 runs. `--check` evaluates one test per Nix process, so its memory peak
 is that of the largest test, not the sum of all of them.
-`vm-tests-no-kvm-checks` always stays in `checks`.
+`vm-tests-no-kvm-checks` always stays in `checks`. `vm-test --check`
+and the `--all` preparation run the same caps and lint per test.
+
+pkgs itself sets `vmTests.runnerSelfTest.enable`, which adds
+`checks.vm-test-runner`: the runner built for two stub tests and run
+against a fake `nix` (PASS, PASS(!), FAIL, CACHED, the preparation
+retry, `--resume`, `--rebuild`). It boots nothing, so CI runs it.

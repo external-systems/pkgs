@@ -16,7 +16,7 @@
   testScript = ''
     start_all()
     machine.wait_for_unit("multi-user.target", timeout=300)
-    machine.succeed("hello | grep -q 'Hello, world!'")
+    machine.succeed("hello | grep 'Hello, world!' >/dev/null")
     machine.succeed("test -s /etc/vm-test-self")
   '';
 }

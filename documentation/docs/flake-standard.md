@@ -36,7 +36,7 @@ nix flake init -t github:external-systems/pkgs
 | `flakeModules.treefmt` | alejandra, deadnix, nixf-diagnose, shellcheck, sizelint, statix as treefmt programs: `formatter`, `checks.treefmt` |
 | `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
 | `flakeModules.vmTests` | NixOS VM tests from `vm-tests/*.nix`: `legacyPackages.vmTests`, `apps.vm-test`, eval-only checks. See [VM tests](vm-tests.md) |
-| `flakeModules.default` | treefmt, docs, vmTests, `checks.lock-sync`, `apps.sync-locks`, and the docs and slides builds as checks |
+| `flakeModules.default` | treefmt, docs, vmTests, `checks.lock-sync`, `apps.sync-locks`, `apps.flake-check` (the evaluation-warning gate, below), and the docs and slides builds as checks |
 | `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides`, `vm-test` scripts, `devenv up` docs + slides processes, `devenv test` gates |
 | `templates.default` | the whole layout for a new repo |
 
@@ -49,12 +49,30 @@ inputs, so a repo declares neither. They add two small nodes to every
 | Command | Does |
 |---|---|
 | `fmt` | format and lint (treefmt) |
-| `check` | `nix flake check` |
+| `check` | `nix run .#flake-check`: `nix flake check`, failing on dangerous evaluation warnings |
 | `docs-build` | `nix build .#documentation -o result-docs`; open `result-docs/index.html` from disk |
 | `devenv up` | live docs on :8981 and slides on :8982 |
 | `devenv test` | treefmt check and lock sync, no VMs |
 | `sync-locks` | after `nix flake update org-pkgs`: re-pin `devenv.lock` |
-| `vm-test` | NixOS VM tests: `--list`, `<name>`, `--all [--serial]` (side by side within `vmTests.parallel`), `--remote`, `--rebuild`, `--check`, `--driver`. Never in CI |
+| `vm-test` | NixOS VM tests: `--list`, `<name>`, `--all [--serial]` (side by side within `vmTests.parallel`), `--remote`, `--rebuild`, `--resume`, `--check`, `--driver`. Never in CI |
+
+## Evaluation warnings
+
+`check` and CI run `nix run .#flake-check`: `nix flake check`, then the
+evaluation warnings from its log, deduplicated. Ordinary warnings
+(deprecations, renames) are listed and pass: fix them when convenient.
+A warning that matches `evalWarnings.deny` fails the run, because it
+means configuration is silently ignored, removed or insecure:
+
+| Pattern (grep -E) | Means |
+|---|---|
+| `no longer has any effect`, `has no effect` | an option you set does nothing |
+| `has been removed` | a setting or package is gone |
+| `is insecure`, `known vulnerabilities` | an insecure package was allowed |
+| `The option .* defined .* does not exist` | a definition goes nowhere |
+
+A repo adds its own with `evalWarnings.deny = lib.mkAfter ["..."];` in
+a module under `flake-parts/`.
 
 ## Badges
 

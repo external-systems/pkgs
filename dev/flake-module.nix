@@ -8,4 +8,7 @@
     ../documentation/flake-module.nix
     ../images/code-agent/flake-module.nix
   ];
+
+  # pkgs owns the vm-test runner: test it with stub tests (no VM).
+  vmTests.runnerSelfTest.enable = true;
 }
