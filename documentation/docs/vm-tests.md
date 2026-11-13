@@ -68,13 +68,23 @@ vmTests = {
     totalCores = 16;                        # all VMs of one test
   };
   flakeChecks.enable = true;                # eval + resources checks in `checks`
+  parallel = {                              # `vm-test --all` budget; defaults:
+    cores = 16;                             #   limits.totalCores
+    memorySize = 24576;                     #   limits.totalMemorySize (MiB)
+    evalJobs = 4;                           # tests evaluated at once, locally
+  };
 };
 ```
 
 The default caps fit a 32 GiB, 16-thread machine. A repo whose tests
 need more (several clusters in one topology) raises `limits` with the
-owner's yes and runs those tests on the remote builder, one at a time
-(`vm-test --all --serial --remote`).
+owner's yes and runs those tests on the remote builder.
+
+`parallel` is what `vm-test --all` may run side by side: the vCPUs and
+MiB that the VMs of all running tests declare together. The default is
+one test's cap, so `--all` is safe anywhere; a repo that runs on the
+remote builder raises it (below the builder's threads and memory, so
+the host keeps headroom and tests do not slow each other into timeouts).
 
 `dir` (default `vm-tests/` in the repo root, `null` to disable) sets the
 directory scanned for tests.
@@ -88,10 +98,10 @@ Inside the devenv shell (`vm-test`, or `nix run .#vm-test --` anywhere):
 | `vm-test --list` | list the tests |
 | `vm-test <name>` | build the test in the Nix sandbox; the exit code is the result |
 | `vm-test <name> --remote` | the same, only on the remote builders (`--max-jobs 0`) |
-| `vm-test --all --remote` | build every test (`vmTestsAll`) on the remote builder, `--keep-going` |
-| `vm-test --all --serial --remote` | build every test one at a time, each with its own log; for tests too large to run side by side |
+| `vm-test --all --remote` | run every test on the remote builder, side by side within `vmTests.parallel` (see below) |
+| `vm-test --all --serial --remote` | the same, one test at a time |
 | `vm-test --check [<name>]` | check that every test (or one) evaluates and fits the caps, one Nix process per test (`legacyPackages.<system>.vmTestChecks.perTest.<name>`) |
-| `vm-test <name> --rebuild` | run a test that already passed again |
+| `vm-test <name> --rebuild` | boot a test that already passed again; works with `--remote` and `--all` |
 | `vm-test <name> --driver` | run the driver on this machine, outside the sandbox |
 | `vm-test <name> --driver --keep-state` | reuse VM disks between runs (fast iteration) |
 | `vm-test <name> --driver --interactive` | Python REPL against live VMs |
@@ -104,6 +114,30 @@ the test-script linter (`F401` for an unused import) or an evaluation
 error. It is printed and saved as `.vm-tests/<name>/summary.txt`, so an
 agent reads a dozen lines instead of the full `-L` log; the full log
 stays in `build.log` (or `driver.log`).
+
+A build that succeeds without booting anything, because the result was
+already in the store, is reported as **CACHED** (with the earlier run's
+summary when its log is available), never as a fresh pass. `--rebuild`
+boots it again: it builds `vmTestsFresh.<name>`, the same test with a
+per-run id (read with `--impure`), because Nix never sends a
+`nix build --rebuild` to a remote builder.
+
+### `--all`
+
+1. **Prepare**, `parallel.evalJobs` tests at a time: evaluate each test,
+   check its caps, read its size and build its driver (the VMs' system
+   closures), so the next phase only boots VMs.
+2. **Run**, largest first: a test starts when its VMs fit in what is
+   left of `parallel.cores` and `parallel.memorySize`, or when nothing
+   else runs (a test larger than the budget runs alone). Each test has
+   its own `build.log`, `summary.txt` and `result.txt`.
+3. **Rerun failures alone.** A test that then passes counts as a pass
+   with a warning (`PASS(!)`: it failed under load, so it is
+   timing-sensitive; its first log is `build-under-load.log`). A test that
+   fails alone fails the run.
+
+The run ends with one line per test: `PASS`, `PASS(!)`, `CACHED` or
+`FAIL`, and exits non-zero on any `FAIL`.
 
 Arguments after `--` go to `nix build`. Build logs, the result link and
 driver output (`driver.log`, `junit.xml`, screenshots) land in
