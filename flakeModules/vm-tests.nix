@@ -544,6 +544,16 @@ in {
           prepare "$t" &
         done
         wait
+        # A preparation can fail for reasons outside the test (a builder
+        # connection dropped while several ran at once): retry each
+        # failed one once, alone, before reporting it.
+        for t in "''${tests[@]}"; do
+          if [ ! -s "$root/.vm-tests/$t/sizes" ]; then
+            echo "vm-test: preparing $t again, alone" >&2
+            mv "$root/.vm-tests/$t/prepare.log" "$root/.vm-tests/$t/prepare-first.log" 2>/dev/null || true
+            prepare "$t"
+          fi
+        done
         ready=() results=()
         for t in "''${tests[@]}"; do
           if [ -s "$root/.vm-tests/$t/sizes" ]; then

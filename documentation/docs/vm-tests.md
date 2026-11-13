@@ -126,7 +126,10 @@ per-run id (read with `--impure`), because Nix never sends a
 
 1. **Prepare**, `parallel.evalJobs` tests at a time: evaluate each test,
    check its caps, read its size and build its driver (the VMs' system
-   closures), so the next phase only boots VMs.
+   closures), so the next phase only boots VMs. A test whose preparation
+   fails (an evaluation error, a cap, or a dropped builder connection) is
+   prepared once more alone; failing again, it is reported as
+   `FAIL (preparation)` with its `prepare.log`.
 2. **Run**, largest first: a test starts when its VMs fit in what is
    left of `parallel.cores` and `parallel.memorySize`, or when nothing
    else runs (a test larger than the budget runs alone). Each test has
