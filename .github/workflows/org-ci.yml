@@ -181,8 +181,17 @@ jobs:
           purge-created: 0
           purge-primary-key: never
 
+      # The repo's flake-check app (org-pkgs flakeModules.default) runs
+      # nix flake check and fails on dangerous evaluation warnings
+      # (evalWarnings.deny), listing the others; plain nix flake check in
+      # a repo that does not have it yet.
       - name: nix flake check
-        run: nix flake check ${{ inputs.check-args }}
+        run: |
+          if nix eval --raw ".#apps.$(nix eval --raw --impure --expr builtins.currentSystem).flake-check.program" >/dev/null 2>&1; then
+            nix run .#flake-check -- ${{ inputs.check-args }}
+          else
+            nix flake check ${{ inputs.check-args }}
+          fi
 
       # The check already built the docs, so this is a store hit. Handing
       # the artifact to deploy saves a runner, a store restore and an

@@ -36,8 +36,17 @@
       description = "Format and lint the repo (treefmt, org linters)";
     };
     check = {
-      exec = ''nix flake check "$@"'';
-      description = "Run every flake check (lint, lock sync, docs, tests)";
+      # The repo's flake-check app (org-pkgs flakeModules.default) fails
+      # on dangerous evaluation warnings; plain nix flake check where a
+      # repo does not have it yet.
+      exec = ''
+        if nix eval --raw ".#apps.$(nix eval --raw --impure --expr builtins.currentSystem).flake-check.program" >/dev/null 2>&1; then
+          nix run .#flake-check -- "$@"
+        else
+          nix flake check "$@"
+        fi
+      '';
+      description = "Run every flake check (lint, lock sync, docs, tests); fail on dangerous eval warnings";
     };
     sync-locks = {
       exec = ''nix run .#sync-locks'';
