@@ -35,9 +35,12 @@
       url = "github:youwen5/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # moscripts follows org-pkgs for nixpkgs, flake-parts and the uv2nix
+    # pins; `follows = ""` points its org-pkgs back at this flake, so it
+    # resolves everything to our own inputs and locks exactly one node.
     moscripts = {
-      url = "https://flakehub.com/f/andrewthomaslee/moscripts/*";
-      inputs.nixpkgs.follows = "nixpkgs";
+      url = "github:andrewthomaslee/moscripts";
+      inputs.org-pkgs.follows = "";
     };
 
     # ------ VS Code extensions (overlays.vscode-extensions) ------ #
