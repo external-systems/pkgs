@@ -104,6 +104,13 @@ credentials and SSH keys, so the workflows give nix a token as
 3. Neither: `github.token`, which is enough for public inputs and lifts
    the anonymous rate limit.
 
+`git+https://` inputs and uv2nix git dependencies (a private org Python
+library in `uv.lock`) go through Nix's git fetcher instead, which ignores
+`access-tokens` and uses git's credentials. When the App or the PAT is
+set, the workflow also points git at the same token
+(`url.https://x-access-token:<token>@github.com/.insteadOf`); with
+neither, git clones anonymously, which public repos need.
+
 Put them on the **org** (Settings → Secrets and variables → Actions)
 rather than on each repo: the secret with *Selected repositories* (only
 the repos that need it, e.g. `home`), the variable on any visibility

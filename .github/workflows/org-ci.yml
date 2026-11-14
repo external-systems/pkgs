@@ -112,6 +112,7 @@ jobs:
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     env:
       HAS_APP: ${{ vars.NIX_APP_CLIENT_ID != '' && secrets.NIX_APP_PRIVATE_KEY != '' }}
+      HAS_PAT: ${{ secrets.NIX_GITHUB_TOKEN != '' }}
       HAS_CACHIX: ${{ inputs.cachix-name != '' }}
       MAIN_PUSH: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
       PAGES: ${{ github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) && inputs.pages }}
@@ -139,6 +140,16 @@ jobs:
           private-key: ${{ secrets.NIX_APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ inputs.private-repos }}
+
+      # Nix's git fetcher ignores access-tokens: git+https inputs and
+      # uv2nix git dependencies (a private org Python library) clone with
+      # git's own credentials. Give git the same token, only when there is
+      # one beyond github.token (public repos need nothing).
+      - name: Git credentials for private repos
+        if: env.HAS_APP == 'true' || env.HAS_PAT == 'true'
+        env:
+          TOKEN: ${{ steps.app-token.outputs.token || secrets.NIX_GITHUB_TOKEN }}
+        run: git config --global url."https://x-access-token:${TOKEN}@github.com/".insteadOf "https://github.com/"
 
       # nix fetches github: inputs through the API, which ignores git
       # credentials, so the token goes in as nix's access-tokens. Without
