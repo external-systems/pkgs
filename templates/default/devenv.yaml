@@ -13,3 +13,6 @@ imports:
   # The org shell: fmt, check, sync-locks, docs, slides; devenv up serves
   # docs and slides.
   - org-pkgs/devenv
+  # Python repos (pyproject.toml + uv.lock): the editable uv2nix venv, uv,
+  # ruff and ty.
+  # - org-pkgs/devenv/python

@@ -4,10 +4,13 @@
   "nix.serverSettings": {
     "nixd": {
       "nixpkgs": {
-        "expr": "import (builtins.getFlake (builtins.toString ./.)).inputs.nixpkgs { }"
+        "expr": "let f = builtins.getFlake (builtins.toString ./.); in import f.inputs.nixpkgs { overlays = [ f.inputs.org-pkgs.overlays.default ]; }"
       },
       "formatting": {
-        "command": ["alejandra", "--quiet"]
+        "command": [
+          "alejandra",
+          "--quiet"
+        ]
       },
       "options": {
         "flake-parts": {
@@ -20,6 +23,26 @@
           "expr": "((builtins.getFlake (builtins.toString ./.)).inputs.nixpkgs.lib.nixosSystem { modules = [ { nixpkgs.hostPlatform = builtins.currentSystem; } ]; }).options"
         }
       }
+    }
+  },
+  "python.defaultInterpreterPath": "${workspaceFolder}/.devenv/profile/bin/python",
+  "python.languageServer": "None",
+  "python.terminal.activateEnvironment": false,
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "ty.path": [
+    "${workspaceFolder}/.devenv/profile/bin/ty"
+  ],
+  "ty.diagnosticMode": "workspace",
+  "ruff.path": [
+    "${workspaceFolder}/.devenv/profile/bin/ruff"
+  ],
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": "explicit",
+      "source.organizeImports": "explicit"
     }
   }
 }
