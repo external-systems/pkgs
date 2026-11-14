@@ -35,11 +35,14 @@
       url = "github:youwen5/zen-browser-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # moscripts follows org-pkgs for nixpkgs, flake-parts and the uv2nix
-    # pins; `follows = ""` points its org-pkgs back at this flake, so it
-    # resolves everything to our own inputs and locks exactly one node.
+    # moscripts follows org-pkgs for nixpkgs and flake-parts (uv2nix
+    # comes through flakeModules.python); `follows = ""` points its
+    # org-pkgs back at this flake, so it resolves everything to our own
+    # inputs and locks exactly one node. git+https, not github:, so its
+    # self.revCount is set and the package carries the release number
+    # (0.2.<commits>).
     moscripts = {
-      url = "github:andrewthomaslee/moscripts";
+      url = "git+https://github.com/andrewthomaslee/moscripts?ref=main";
       inputs.org-pkgs.follows = "";
     };
 
