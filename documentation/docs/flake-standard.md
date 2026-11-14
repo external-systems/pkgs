@@ -36,8 +36,10 @@ nix flake init -t github:external-systems/pkgs
 | `flakeModules.treefmt` | alejandra, deadnix, nixf-diagnose, shellcheck, sizelint, statix as treefmt programs: `formatter`, `checks.treefmt` |
 | `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
 | `flakeModules.vmTests` | NixOS VM tests from `vm-tests/*.nix`: `legacyPackages.vmTests`, `apps.vm-test`, eval-only checks. See [VM tests](vm-tests.md) |
-| `flakeModules.default` | treefmt, docs, vmTests, `checks.lock-sync`, `apps.sync-locks`, `apps.flake-check` (the evaluation-warning gate, below), and the docs and slides builds as checks |
+| `flakeModules.python` | uv2nix for repos with `pyproject.toml` + `uv.lock`: packages versioned `<major>.<minor>.<commits>`, apps, checks (pytest, ty, uv-lock, version), ruff in treefmt, the `python-cli` VM test. See [Python](python.md) |
+| `flakeModules.default` | treefmt, docs, vmTests, python, `checks.lock-sync`, `apps.sync-locks`, `apps.flake-check` (the evaluation-warning gate, below), and the docs and slides builds as checks |
 | `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides`, `vm-test` scripts, `devenv up` docs + slides processes, `devenv test` gates |
+| `devenv/python/` (`org-pkgs/devenv/python`) | Python repos: the editable uv2nix venv, `uv`, `ruff`, `ty`, the uv settings. See [Python](python.md) |
 | `templates.default` | the whole layout for a new repo |
 
 The flake modules are bound to pkgs' own `treefmt-nix` and `reveal-js`

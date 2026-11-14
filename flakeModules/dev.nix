@@ -1,5 +1,6 @@
 # The org dev base: treefmt, docs and slides (flakeModules.docs), NixOS
-# VM tests and the vm-test runner (flakeModules.vmTests), the lock-sync
+# VM tests and the vm-test runner (flakeModules.vmTests), Python repos on
+# uv2nix (flakeModules.python, on when pyproject.toml + uv.lock exist), the lock-sync
 # check and app, and the docs build as checks. A repo imports
 # inputs.org-pkgs.flakeModules.default in its flake.nix; no dev/flake.nix.
 #
@@ -63,6 +64,7 @@ in {
     (import ./treefmt.nix {inherit orgInputs;})
     (import ./docs.nix {inherit orgInputs;})
     (import ./vm-tests.nix {inherit orgInputs;})
+    (import ./python.nix {inherit orgInputs;})
     (import ./eval-warnings.nix {inherit orgInputs;})
   ];
 

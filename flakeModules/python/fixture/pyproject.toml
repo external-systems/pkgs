@@ -1,0 +1,13 @@
+[project]
+name = "fixture"
+version = "0.1.0"
+description = "flakeModules.python self-test: one CLI, no dependencies"
+requires-python = ">=3.13"
+dependencies = []
+
+[project.scripts]
+fixture = "fixture:main"
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"

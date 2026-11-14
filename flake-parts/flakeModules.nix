@@ -21,7 +21,11 @@ in {
       # NixOS VM tests from vm-tests/*.nix: legacyPackages.vmTests, the
       # vm-test runner and eval-only checks. Never boots a VM in checks.
       vmTests = bind ../flakeModules/vm-tests.nix;
-      # treefmt + docs + vmTests + checks.lock-sync + apps.sync-locks +
+      # uv2nix for repos with pyproject.toml + uv.lock: packages, apps,
+      # checks (pytest, ty, uv-lock, version), ruff in treefmt and a
+      # vm-test, versioned <major>.<minor>.<commit count>.
+      python = bind ../flakeModules/python.nix;
+      # treefmt + docs + vmTests + python + checks.lock-sync + apps.sync-locks +
       # docs as checks: the one import every repo's flake.nix needs
       # (inputs.org-pkgs.flakeModules.default).
       default = bind ../flakeModules/dev.nix;
