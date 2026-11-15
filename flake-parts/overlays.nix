@@ -31,8 +31,8 @@
   };
   # numtide/llm-agents.nix's AI coding agents, built against the
   # consumer's nixpkgs (its shared-nixpkgs overlay) and put in place of
-  # the nixpkgs attrs every consumer already reads, so modules and the
-  # code-agent image get the latest release without renaming anything.
+  # the nixpkgs attrs every consumer already reads, so modules gets the
+  # latest release without renaming anything.
   # The whole set stays reachable as pkgs.llm-agents. Static names, so a
   # consumer that never reads them never fetches the input.
   llmAgents = final: prev: let

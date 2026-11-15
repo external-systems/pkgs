@@ -108,26 +108,8 @@
 
       systems = ["x86_64-linux" "aarch64-linux"];
 
-      imports = [
-        inputs.flake-parts.flakeModules.partitions
-        (inputs.import-tree ./flake-parts)
-      ];
-
-      # Apps, checks and the formatter are evaluated only on demand; a
-      # consumer reading packages, overlays or lib never fetches the dev
-      # inputs (dev/flake.nix). packages stays here: consumers build them.
-      # The dev shell is devenv (devenv.yaml), not a flake output.
-      partitionedAttrs = {
-        apps = "dev";
-        checks = "dev";
-        formatter = "dev";
-        # Docs/slides: `nix build .#documentation` (flakeModules.docs).
-        legacyPackages = "dev";
-      };
-
-      partitions.dev = {
-        module = ./dev/flake-module.nix;
-        extraInputsFlake = ./dev;
-      };
+      # flake-parts/org-standard.nix applies the org standard to pkgs
+      # itself. The dev shell is devenv (devenv.yaml), not a flake output.
+      imports = [(inputs.import-tree ./flake-parts)];
     };
 }

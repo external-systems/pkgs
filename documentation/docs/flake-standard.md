@@ -19,9 +19,8 @@ documentation/              docs/*.md, slides/slides.md; optional
 
 No `dev/flake.nix`, no `dev/flake.lock`, no partition: every dev tool
 (treefmt, MkDocs, reveal.js) comes from pkgs, which every repo already
-locks, so a second lock would protect nobody. pkgs itself is the one
-exception: its code-agent image needs external-systems/modules, which
-depends on pkgs, so that input lives in pkgs' own dev partition.
+locks, so a second lock would protect nobody. That holds for pkgs
+itself too.
 
 Start a repo from the template:
 
@@ -113,7 +112,6 @@ replaces nixpkgs' `pkgs` and fails with "attribute 'bash' missing".
 
 ## Two lockfiles, one nixpkgs
 
-`flake.lock` and `devenv.lock` must resolve nixpkgs to the same rev (pkgs
-also checks its `dev/flake.lock`). `checks.lock-sync` fails when they
+`flake.lock` and `devenv.lock` must resolve nixpkgs to the same rev. `checks.lock-sync` fails when they
 drift and names the fix. The bump flow is always
 `nix flake update org-pkgs`, then `sync-locks`, in one commit.

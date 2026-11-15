@@ -1,5 +1,5 @@
 # This repo's docs: flakeModules.docs (imported through flakeModules.default
-# in dev/flake-module.nix), dogfooded with no mkdocs.yml and no deck
+# in flake-parts/org-standard.nix), dogfooded with no mkdocs.yml and no deck
 # index.html. Only what differs from the org defaults is set here.
 {
   perSystem.docs = {
