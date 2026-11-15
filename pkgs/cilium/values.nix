@@ -46,5 +46,15 @@
     useAPIServer = true;
     # Chart-validated choices are 255 (upstream default) or 511.
     maxConnectedClusters = 511;
+    # The consumer supplies the four clustermesh-apiserver-*-cert Secrets
+    # from its own PKI (clanServices: clan vars). With auto generation off
+    # the chart renders no CA, no keys and no Secrets, so a render is
+    # deterministic and no private key is committed.
+    apiserver.tls.auto.enabled = false;
   };
+
+  # D1: networking only, so Hubble is off. With Hubble on, the chart either
+  # generates its CA and server keys (non-deterministic, committed keys) or
+  # demands certs as values. Enable it day-2 with its own certificate owner.
+  hubble.enabled = false;
 }

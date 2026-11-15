@@ -87,13 +87,14 @@ module merging in clanServices), never re-run helm values here.
 
 | Component | Artifacts |
 |---|---|
-| `manifests/cilium/1.20.3.yaml` | Cilium 1.20.3, canonical profile (`pkgs/cilium/values.nix`): KPR, native routing, multi-pool IPAM, auto-direct-node-routes off, Cilium iptables rules off, BPF masquerade+tproxy, Maglev, pmtu, dual-stack, clustermesh-apiserver, Gateway/Ingress off (D1) |
+| `manifests/cilium/1.20.3.yaml` | Cilium 1.20.3, canonical profile (`pkgs/cilium/values.nix`): KPR, native routing, multi-pool IPAM, auto-direct-node-routes off, Cilium iptables rules off, BPF masquerade+tproxy, Maglev, pmtu, dual-stack, clustermesh-apiserver without chart-generated certs, Hubble off, Gateway/Ingress off (D1) |
 
-The committed manifest is regenerated with `nix run .#update-manifests`. It
-has no freshness check for now: the chart generates its Hubble and
-clustermesh TLS Secrets on every render, so a fresh render never matches the
-committed file. Those certs are replaced by the clanServices Kubernetes
-services and are never used.
+The committed manifest is regenerated with `nix run .#update-manifests`, and
+`checks.manifest-cilium-freshness` fails when it differs from a fresh render.
+The chart generates no certificates: clustermesh-apiserver TLS auto
+generation is off and Hubble is off, so the manifest holds no Secrets and no
+private keys and every render is identical. The consumer supplies the four
+`clustermesh-apiserver-*-cert` Secrets (clanServices: from clan vars).
 
 ## Images and airgap
 
