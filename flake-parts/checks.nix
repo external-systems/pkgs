@@ -6,7 +6,7 @@
   perSystem = {pkgs, ...}: {
     # Per minor, both distro runtimes must package the SAME Kubernetes
     # release (SPEC D34). Formatting and lint are checks.treefmt, from
-    # flakeModules.treefmt in the dev partition.
+    # flakeModules.treefmt (flake-parts/org-standard.nix).
     checks = lib.mapAttrs' (minor: versions:
       lib.nameValuePair "k8s-version-parity-${minor}" (pkgs.runCommand "k8s-version-parity-${minor}" {
           k3sK8s = versions.kubernetes;

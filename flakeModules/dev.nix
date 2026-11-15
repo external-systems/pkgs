@@ -5,8 +5,8 @@
 # inputs.org-pkgs.flakeModules.default in its flake.nix; no dev/flake.nix.
 #
 # The lockfiles must agree on nixpkgs: flake.lock, devenv.lock (the
-# devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, only in a
-# repo that still has one (pkgs itself), dev/flake.lock's dev-nixpkgs.
+# devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, in a
+# repo with a dev partition (none today), dev/flake.lock's dev-nixpkgs.
 # checks.lock-sync fails when they drift; `sync-locks` (devenv script, or
 # nix run .#sync-locks) re-pins devenv.yaml (and dev/flake.lock) to
 # flake.lock.

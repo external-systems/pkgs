@@ -23,7 +23,7 @@ GitOps-owned (SPEC §3.3) and no longer carried here.
 
 Outside that contract, the repo also builds the workstation and agent tooling
 the fleet flakes (external-systems/home) used to build themselves: the
-`overlays.tools` packages and the code-agent sandbox image (see below).
+`overlays.tools` packages.
 
 ## Consuming
 
@@ -129,16 +129,15 @@ Cilium chart bumps: edit `pkgs/cilium/versions.nix` (new version + hash via
 render's image references), then `nix run .#update-manifests`. k3s bumps ride
 `nix flake update nixpkgs` — verify the minors' patches still match upstream
 latest afterwards, then run `sync-locks` in the same commit so
-`dev/flake.lock` and `devenv.yaml`/`devenv.lock` follow (`checks.lock-sync`
+`devenv.yaml`/`devenv.lock` follow (`checks.lock-sync`
 enforces it).
 
 ## Development
 
 Needs Nix and devenv. The shell is the devenv CLI (`devenv.yaml` imports the
-org shell from `./devenv`); apps, checks, the formatter, docs and slides live
-in the `dev` flake-parts partition. Its one extra input (external-systems/
-modules, for the code-agent image) is locked separately in `dev/flake.lock`,
-so consumers of `packages`, `overlays` or `lib` never fetch it.
+org shell from `./devenv`). pkgs applies its own org standard
+(`flake-parts/org-standard.nix`): apps, checks, the formatter, docs and
+slides. There is no dev partition and no `dev/flake.lock`.
 
 ```bash
 devenv allow           # auto-activation (after `devenv hook`)
@@ -249,17 +248,4 @@ VS Code Marketplace as `<set>.<publisher>.<name>` (lowercase). The
 latest version. The input is lazy: a consumer that never reads these
 attributes never fetches it. external-systems/modules
 `homeModules.vscodium` takes its extensions from here.
-
-## code-agent image
-
-The OpenShell code-agent sandbox image (agent CLIs, nix, the skills tree from
-external-systems/skills, home-manager-generated dotfiles) lives in the dev
-partition (`images/code-agent/`), so its inputs (external-systems/modules,
-which brings home-manager and skills) are locked only in `dev/flake.lock`.
-
-```sh
-nix build .#code-agent-image                 # streamed docker-archive script
-nix run .#load-code-agent-image              # docker load
-nix run .#push-code-agent-image -- docker://ghcr.io/<org>/code-agent:<tag>
-```
 
