@@ -26,14 +26,40 @@ in {
       };
   });
 
-  # dhcpcd is the DHCP client IfState hooks start (clanServices netif).
-  # 10.3.x closes a DHCPv6 address socket before deleting it from its
-  # event loop. The stale entry makes the next socket that reuses the
-  # descriptor number fail with "eloop_event_add: No such file or
-  # directory", and DHCPv4 or DHCPv6 then does not recover after a
-  # carrier change. Upstream fixed both halves in 10.5.0
-  # (NetworkConfiguration/dhcpcd#611); these are those two commits. The
-  # version guard drops them once nixpkgs ships 10.5 or newer.
+  # dhcpcd, two attributes. nixpkgs ships 10.3.2, which closes a DHCPv6
+  # address socket before deleting it from its event loop: after a
+  # carrier change DHCPv4 or DHCPv6 does not recover ("eloop_event_add:
+  # No such file or directory", NetworkConfiguration/dhcpcd#596).
+  # Upstream fixed it in 10.5.0, with four CVEs (CVE-2026-56113,
+  # -56114, -56116, -56117).
+  #
+  # `dhcpcd_latest` is the unpatched upstream 10.5.2 on the nixpkgs
+  # build recipe. clanServices netif runs it: netif starts dhcpcd from
+  # an IfState hook, not from the NixOS `dhcpcd.service`. `patches` is
+  # emptied on purpose: a fix nixpkgs backports to its older version
+  # would not apply to this source.
+  dhcpcd_latest =
+    if final.lib.versionOlder prev.dhcpcd.version "10.5.2"
+    then
+      prev.dhcpcd.overrideAttrs (_: {
+        version = "10.5.2";
+        patches = [];
+        src = final.fetchFromGitHub {
+          owner = "NetworkConfiguration";
+          repo = "dhcpcd";
+          tag = "v10.5.2";
+          hash = "sha256-lrV6SaB/HmTptZigZ1Lf28eUPz0igxyT6omZwXDSuGM=";
+        };
+      })
+    else prev.dhcpcd;
+
+  # `dhcpcd` stays 10.3.2 with the two upstream commits of the lost-lease
+  # fix (NetworkConfiguration/dhcpcd#611). It cannot be 10.5 yet: from
+  # 10.5.1 dhcpcd calls chown on its control socket, and the system-call
+  # filter of the NixOS `dhcpcd.service` kills it at start ("dhcpcd
+  # manager hungup"; NixOS/nixpkgs#562813 adds `@chown`). A machine with
+  # `networking.useDHCP` would lose DHCP. The version guard drops the
+  # patches once nixpkgs ships 10.5 with that unit.
   dhcpcd = prev.dhcpcd.overrideAttrs (old: {
     patches =
       (old.patches or [])

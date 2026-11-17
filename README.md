@@ -44,11 +44,16 @@ inputs.org-pkgs.url = "github:external-systems/pkgs/<immutable-rev>";
   nix-vscode-extensions, this flake's only non-core inputs) are also
   exported separately. Applying the default overlay gives you the pinned
   artifacts as `pkgs.rke2` / `pkgs.k3s_1_36` / `pkgs.ifstate`.
-  `overlays.ifstate` is the host-networking set: IfState 2.5.1 and a
-  patched `dhcpcd` (two upstream fixes for lost leases after a carrier
-  change on 10.3.x; dropped automatically from 10.5). A package that
-  needs a patch nixpkgs does not carry yet is patched here, never in a
-  consumer repo. The builder
+  `overlays.ifstate` is the host-networking set: IfState 2.5.1 and two
+  dhcpcd attributes. nixpkgs ships dhcpcd 10.3.2, which loses leases
+  after a carrier change and has four CVEs. `dhcpcd_latest` is the
+  unpatched upstream 10.5.2; clanServices netif runs it. `dhcpcd` stays
+  10.3.2 with the two upstream lost-lease commits, because 10.5 does
+  not start under the NixOS `dhcpcd.service` until nixpkgs#562813
+  lands. Both overrides drop out once nixpkgs catches up. A package
+  nixpkgs ships too old or broken is fixed here, never in a consumer
+  repo: the upstream release when it works, a patch only when it does
+  not. The builder
   expressions come from the consumer's nixpkgs: rke2 needs any nixpkgs
   shipping `pkgs/applications/networking/cluster/rke2/builder.nix` (all
   version data is pinned locally in `pkgs/rke2/versions/`); k3s rides the

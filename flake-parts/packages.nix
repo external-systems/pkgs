@@ -32,6 +32,7 @@
           (artifactPkgs)
           ifstate
           dhcpcd
+          dhcpcd_latest
           rke2
           rke2_1_35
           rke2_1_36
