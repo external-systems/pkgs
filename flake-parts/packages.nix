@@ -31,6 +31,7 @@
         inherit
           (artifactPkgs)
           ifstate
+          dhcpcd
           rke2
           rke2_1_35
           rke2_1_36

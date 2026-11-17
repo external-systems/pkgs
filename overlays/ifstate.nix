@@ -25,4 +25,21 @@ in {
         jsonschema = "${ifstateSrc}/schema/2/ifstate.conf.schema.json";
       };
   });
+
+  # dhcpcd is the DHCP client IfState hooks start (clanServices netif).
+  # 10.3.x closes a DHCPv6 address socket before deleting it from its
+  # event loop. The stale entry makes the next socket that reuses the
+  # descriptor number fail with "eloop_event_add: No such file or
+  # directory", and DHCPv4 or DHCPv6 then does not recover after a
+  # carrier change. Upstream fixed both halves in 10.5.0
+  # (NetworkConfiguration/dhcpcd#611); these are those two commits. The
+  # version guard drops them once nixpkgs ships 10.5 or newer.
+  dhcpcd = prev.dhcpcd.overrideAttrs (old: {
+    patches =
+      (old.patches or [])
+      ++ final.lib.optionals (final.lib.versionOlder old.version "10.5.0") [
+        ./patches/dhcpcd/0001-eloop-always-remove-event-from-list-on-delete.patch
+        ./patches/dhcpcd/0002-dhcp6-delete-eloop-event-before-closing-ia-socket.patch
+      ];
+  });
 }
