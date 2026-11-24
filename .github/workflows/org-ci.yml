@@ -154,7 +154,7 @@ jobs:
       # nix fetches github: inputs through the API, which ignores git
       # credentials, so the token goes in as nix's access-tokens. Without
       # one, github.token still lifts the anonymous API rate limit.
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32
         with:
           extra_nix_config: |
             access-tokens = github.com=${{ steps.app-token.outputs.token || secrets.NIX_GITHUB_TOKEN || github.token }}
