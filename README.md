@@ -162,6 +162,11 @@ docs-build             # static docs to ./result-docs (nix build
 devenv up              # live docs :8981 and slides :8982
 ```
 
+Entering the shell installs the org git hooks (`fmt` on commit). pkgs pins
+git-hooks.nix in `flake.lock`; other repos follow it from `devenv.yaml`
+(`git-hooks.follows: org-pkgs/git-hooks`). See
+`documentation/docs/flake-standard.md` (Git hooks), including worktrees.
+
 `git add` new files before evaluating — Nix reads the git tree. This repo is
 the organization's nixpkgs authority: downstream flakes follow `pkgs/nixpkgs`
 so routine artifact and nixpkgs updates remain independent of consumer update

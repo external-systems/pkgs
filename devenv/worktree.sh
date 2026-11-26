@@ -46,6 +46,13 @@ case "${1:-}" in
     path="$root/$branch"
     git -C "$clone" fetch --quiet origin
     git -C "$clone" worktree add --quiet "$path" -b "$branch" origin/main
+    # Git hooks live in the clone and all worktrees share them, but each
+    # worktree reads its own .pre-commit-config.yaml, which the devenv
+    # shell writes. Enter it once so the first commit finds the config.
+    if [ -f "$path/devenv.yaml" ]; then
+      (cd "$path" && devenv shell -- true >/dev/null 2>&1) ||
+        echo "worktree: devenv shell failed in $path; enter it before committing" >&2
+    fi
     echo "$path"
     ;;
   list)
