@@ -37,7 +37,7 @@ nix flake init -t github:external-systems/pkgs
 | `flakeModules.docs` | MkDocs site + reveal.js deck: `packages.documentation`, `packages.slides`, `apps.watch-documentation`, `apps.serve-slides`. See [Docs and slides](docs-and-slides.md) |
 | `flakeModules.vmTests` | NixOS VM tests from `vm-tests/*.nix`: `legacyPackages.vmTests`, `apps.vm-test`, eval-only checks. See [VM tests](vm-tests.md) |
 | `flakeModules.python` | uv2nix for repos with `pyproject.toml` + `uv.lock`: packages versioned `<major>.<minor>.<commits>`, apps, checks (pytest, ty, uv-lock, version), ruff in treefmt, the `python-cli` VM test. See [Python](python.md) |
-| `flakeModules.default` | treefmt, docs, vmTests, python, `checks.lock-sync`, `apps.sync-locks`, `apps.flake-check` (the evaluation-warning gate, below), and the docs and slides builds as checks |
+| `flakeModules.default` | treefmt, docs, vmTests, python, `checks.lock-sync`, `checks.git-hooks`, `apps.sync-locks`, `apps.flake-check` (the evaluation-warning gate, below), and the docs and slides builds as checks |
 | `devenv/` (imported by `devenv.yaml`) | the org shell: `fmt`, `check`, `sync-locks`, `docs`, `slides`, `vm-test`, `worktree` scripts, the `fmt` git hook (below), `devenv up` docs + slides processes, `devenv test` gates |
 | `devenv/python/` (`org-pkgs/devenv/python`) | Python repos: the editable uv2nix venv, `uv`, `ruff`, `ty`, the uv settings. See [Python](python.md) |
 | `templates.default` | the whole layout for a new repo |
@@ -60,17 +60,22 @@ inputs, so a repo declares neither. They add two small nodes to every
 
 ## Git hooks
 
-The org shell installs a `pre-commit` hook that runs `nix fmt -- --ci`:
+Every org repo has git hooks, the same way it has the devenv shell: there
+is no opt-out. The org shell installs a `pre-commit` hook that runs `nix fmt -- --ci`:
 the commit stops when anything is unformatted (treefmt fixes the files;
 `git add` them and commit again). The hooks come from
 [cachix/git-hooks.nix](https://github.com/cachix/git-hooks.nix) through
 devenv and run under prek. They are local feedback: anyone can skip them,
 so CI stays the gate. Never commit with `--no-verify`; fix what the hook
-reports.
+reports. Agents are held to that by the ground rules and, for claude, by
+a hook that blocks the skip (external-systems/modules,
+`homeSpec.agents.gitHookGuard`).
 
-A repo opts in with two lines. devenv reads inputs from the repo's own
-`devenv.yaml` only (not from the imported `org-pkgs/devenv`), so each repo
-follows the pkgs pin, and `sync-locks` keeps it in step:
+Every repo carries two lines for them. devenv reads inputs from the repo's
+own `devenv.yaml` only (not from the imported `org-pkgs/devenv`), so each
+repo follows the pkgs pin, and `sync-locks` keeps it in step.
+`checks.git-hooks` (in `flakeModules.default`) fails CI when either line
+is missing; without the input the shell would not start at all:
 
 ```yaml
 # devenv.yaml, under inputs:
@@ -83,8 +88,11 @@ follows the pkgs pin, and `sync-locks` keeps it in step:
 .pre-commit-config.yaml
 ```
 
-Without the input the hooks stay off, and entering the shell prints a
-one-line note. A repo adds its own hooks in `devenv.nix`:
+When a repo moves to a pkgs with mandatory hooks: `nix flake update
+org-pkgs`, `nix run .#sync-locks` (outside the shell, which cannot start
+before the input is there), then the two lines and `devenv shell -- true`.
+
+A repo adds its own hooks in `devenv.nix`:
 
 ```nix
 git-hooks.hooks.clan-vars-check = {
@@ -103,8 +111,8 @@ worktree runs the same hooks, but each reads its own
 `.pre-commit-config.yaml`, which the devenv shell writes. A worktree that
 never entered the shell cannot commit (`config file not found`): enter it
 once (`devenv shell -- true`, or any `fmt`). `worktree new` does that for
-you. A branch from before its repo opted in has no config at all: rebase
-it onto `main`, or commit with `PREK_ALLOW_NO_CONFIG=1` once.
+you. A branch from before its repo had git hooks has no config at all:
+rebase it onto `main`.
 
 ## Evaluation warnings
 
@@ -162,6 +170,6 @@ replaces nixpkgs' `pkgs` and fails with "attribute 'bash' missing".
 ## Two lockfiles, one nixpkgs
 
 `flake.lock` and `devenv.lock` must resolve nixpkgs to the same rev, and
-git-hooks too once `devenv.yaml` has it. `checks.lock-sync` fails when they
+git-hooks too. `checks.lock-sync` fails when they
 drift and names the fix. The bump flow is always
 `nix flake update org-pkgs`, then `sync-locks`, in one commit.

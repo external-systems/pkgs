@@ -4,16 +4,10 @@
 # processes on top. Plain devenv module: never reference flake outputs.
 {
   config,
-  inputs,
   lib,
   pkgs,
   ...
-}: let
-  # devenv reads inputs from the repo's own devenv.yaml only, so a repo
-  # opts in with `git-hooks.follows: org-pkgs/git-hooks`. Without it the
-  # hooks stay off (devenv would fail on a hook with no input).
-  hasGitHooks = inputs ? git-hooks;
-in {
+}: {
   options.org.check.extraCommands = lib.mkOption {
     type = with lib.types; listOf str;
     default = [];
@@ -105,13 +99,15 @@ in {
       };
     };
 
-    # Git hooks (cachix/git-hooks.nix, run by prek). Entering the shell
-    # installs them into the clone's hooks directory, which all its
-    # worktrees share; each worktree runs its own .pre-commit-config.yaml.
-    # A repo adds its own next to these (git-hooks.hooks.<name>, guarded
-    # the same way). Local feedback only: CI stays the gate.
+    # Git hooks (cachix/git-hooks.nix, run by prek), part of every org
+    # shell. devenv reads inputs from the repo's own devenv.yaml only, so
+    # every repo has `git-hooks.follows: org-pkgs/git-hooks` there
+    # (checks.git-hooks enforces it). Entering the shell installs the
+    # hooks into the clone's hooks directory, which all its worktrees
+    # share; each worktree runs its own .pre-commit-config.yaml. A repo
+    # adds its own next to these (git-hooks.hooks.<name>).
     git-hooks.hooks.fmt = {
-      enable = hasGitHooks;
+      enable = true;
       name = "fmt";
       # The flake's own treefmt, as CI runs it: fail on any change.
       entry = "nix fmt -- --ci";
@@ -124,12 +120,6 @@ in {
       docs.exec = config.scripts.docs.exec;
       slides.exec = config.scripts.slides.exec;
     };
-
-    # devenv (2.4) does not print module warnings on shell entry: say it
-    # here, on stderr, until the repo opts in.
-    enterShell = lib.mkIf (!hasGitHooks) ''
-      echo "org shell: git hooks are off; add 'git-hooks: {follows: org-pkgs/git-hooks}' to devenv.yaml inputs" >&2
-    '';
 
     # `devenv test`: the cheap static gates, never VMs.
     enterTest = ''

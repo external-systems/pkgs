@@ -162,7 +162,8 @@ docs-build             # static docs to ./result-docs (nix build
 devenv up              # live docs :8981 and slides :8982
 ```
 
-Entering the shell installs the org git hooks (`fmt` on commit). pkgs pins
+Entering the shell installs the org git hooks (`fmt` on commit); every
+org repo has them, with no opt-out (`checks.git-hooks`). pkgs pins
 git-hooks.nix in `flake.lock`; other repos follow it from `devenv.yaml`
 (`git-hooks.follows: org-pkgs/git-hooks`). See
 `documentation/docs/flake-standard.md` (Git hooks), including worktrees.
