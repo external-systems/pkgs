@@ -28,6 +28,20 @@
       flake = false;
     };
 
+    # ------ Git hooks (the org devenv shell) ------ #
+    # cachix/git-hooks.nix, read by devenv's git-hooks module. devenv
+    # takes inputs from the repo's own devenv.yaml only, so each repo
+    # follows this pin (`git-hooks.follows: org-pkgs/git-hooks`) and
+    # sync-locks keeps it in step with org-pkgs. Lazy: never fetched by
+    # a flake evaluation.
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs";
+        flake-compat.follows = "";
+      };
+    };
+
     # ------ Third-party flakes (overlays.third-party) ------ #
     # Packages that only ship as flakes. Lazy: a consumer that never reads
     # pkgs.zen-browser / pkgs.moscripts never fetches them.

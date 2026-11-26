@@ -9,6 +9,10 @@ inputs:
     url: github:external-systems/pkgs
   nixpkgs:
     follows: org-pkgs/nixpkgs
+  # The org shell's git hooks (fmt on commit). devenv reads inputs from
+  # this file only, so the repo follows the pkgs pin.
+  git-hooks:
+    follows: org-pkgs/git-hooks
 imports:
   # The org shell: fmt, check, sync-locks, docs, slides; devenv up serves
   # docs and slides.

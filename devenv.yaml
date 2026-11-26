@@ -1,9 +1,15 @@
 # devenv CLI entry for pkgs (devenv shell, auto-activation, devenv up,
-# devenv mcp). pkgs owns nixpkgs, so the pin is the flake.lock rev
-# itself; checks.lock-sync enforces it and `sync-locks` rewrites it.
-# Other repos take nixpkgs from pkgs instead (templates/default).
+# devenv mcp). pkgs owns nixpkgs and git-hooks, so the pins are the
+# flake.lock revs themselves; checks.lock-sync enforces them and
+# `sync-locks` rewrites them. Other repos follow pkgs instead
+# (templates/default).
 inputs:
   nixpkgs:
     url: github:NixOS/nixpkgs/31ecbaca1bdefa45dffc409f0250bd8039ea0010
+  git-hooks:
+    url: github:cachix/git-hooks.nix/5c6bf7c418b4abf003e6d00d231e87f5e6ad5230
+    inputs:
+      nixpkgs:
+        follows: nixpkgs
 imports:
   - ./devenv

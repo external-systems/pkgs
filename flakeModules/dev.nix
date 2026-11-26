@@ -7,9 +7,11 @@
 # The lockfiles must agree on nixpkgs: flake.lock, devenv.lock (the
 # devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, in a
 # repo with a dev partition (none today), dev/flake.lock's dev-nixpkgs.
-# checks.lock-sync fails when they drift; `sync-locks` (devenv script, or
-# nix run .#sync-locks) re-pins devenv.yaml (and dev/flake.lock) to
-# flake.lock.
+# A devenv.lock with git-hooks (the org shell's hooks) must also match
+# the git-hooks that flake.lock resolves through org-pkgs (in pkgs, its
+# own input). checks.lock-sync fails when they drift; `sync-locks`
+# (devenv script, or nix run .#sync-locks) re-pins devenv.yaml (and
+# dev/flake.lock) to flake.lock.
 {orgInputs}: {
   lib,
   self,
@@ -17,19 +19,28 @@
 }: let
   lockOf = file: builtins.fromJSON (builtins.readFile file);
 
-  # Node a root input resolves to, following `follows` paths (lists,
-  # always relative to the root node).
+  # Node an input path resolves to, following `follows` paths (lists,
+  # always relative to the root node); null when an input is missing.
   resolve = lock: path:
     lib.foldl' (node: name: let
-      ref = lock.nodes.${node}.inputs.${name};
+      ref = lock.nodes.${node}.inputs.${name} or null;
     in
-      if builtins.isList ref
+      if node == null
+      then null
+      else if builtins.isList ref
       then resolve lock ref
       else ref)
     lock.root
     path;
 
-  revOf = lock: name: lock.nodes.${resolve lock [name]}.locked.rev or "missing";
+  revAt = lock: path: let
+    node = resolve lock path;
+  in
+    if node == null
+    then "missing"
+    else lock.nodes.${node}.locked.rev or "missing";
+
+  revOf = lock: name: revAt lock [name];
 
   rootLock = lockOf "${self}/flake.lock";
   hasDevenv = builtins.pathExists "${self}/devenv.lock";
@@ -58,6 +69,13 @@
     };
   rootRev = revs."flake.lock nixpkgs";
   drifted = lib.filterAttrs (_: rev: rev != rootRev) revs;
+
+  # git-hooks: checked only once devenv.yaml has opted in.
+  devenvLock = lockOf "${self}/devenv.lock";
+  hasGitHooks = hasDevenv && devenvLock.nodes.${devenvLock.root}.inputs ? git-hooks;
+  gitHooksRev = revAt rootLock (lib.optional (pkgsInput != null) pkgsInput ++ ["git-hooks"]);
+  devenvGitHooksRev = revOf devenvLock "git-hooks";
+  gitHooksDrifted = hasGitHooks && devenvGitHooksRev != gitHooksRev;
 in {
   key = "external-systems/pkgs#flakeModules.dev";
   imports = [
@@ -97,10 +115,15 @@ in {
             sed -i -E 's#(url: github:external-systems/pkgs)[^[:space:]]*#\1/${pkgsRev}#' devenv.yaml
             devenv update org-pkgs
           ''
-          else ''
-            sed -i -E 's#(url: github:NixOS/nixpkgs)[^[:space:]]*#\1/${rootRev}#' devenv.yaml
-            devenv update nixpkgs
-          ''
+          else
+            ''
+              sed -i -E 's#(url: github:NixOS/nixpkgs)[^[:space:]]*#\1/${rootRev}#' devenv.yaml
+              devenv update nixpkgs
+            ''
+            + lib.optionalString hasGitHooks ''
+              sed -i -E 's#(url: github:cachix/git-hooks.nix)[^[:space:]]*#\1/${gitHooksRev}#' devenv.yaml
+              devenv update git-hooks
+            ''
         )
         + ''
           fi
@@ -117,14 +140,21 @@ in {
     checks =
       {
         lock-sync = pkgs.runCommand "lock-sync" {} (
-          if drifted == {}
+          if drifted == {} && !gitHooksDrifted
           then "touch $out"
-          else ''
-            echo "nixpkgs drifted from flake.lock (${rootRev}):" >&2
-            ${lib.concatLines (lib.mapAttrsToList (name: rev: "echo '  ${name} = ${rev}' >&2") drifted)}
-            echo "Fix: sync-locks (devenv shell) or nix run .#sync-locks" >&2
-            exit 1
-          ''
+          else
+            lib.optionalString (drifted != {}) ''
+              echo "nixpkgs drifted from flake.lock (${rootRev}):" >&2
+              ${lib.concatLines (lib.mapAttrsToList (name: rev: "echo '  ${name} = ${rev}' >&2") drifted)}
+            ''
+            + lib.optionalString gitHooksDrifted ''
+              echo "git-hooks drifted from flake.lock (${gitHooksRev}):" >&2
+              echo "  devenv.lock git-hooks = ${devenvGitHooksRev}" >&2
+            ''
+            + ''
+              echo "Fix: sync-locks (devenv shell) or nix run .#sync-locks" >&2
+              exit 1
+            ''
         );
       }
       # Docs and slides build on every flake check (mkdocs strict mode
