@@ -7,11 +7,16 @@
 # The lockfiles must agree on nixpkgs: flake.lock, devenv.lock (the
 # devenv CLI shell, nixpkgs following org-pkgs/nixpkgs) and, in a
 # repo with a dev partition (none today), dev/flake.lock's dev-nixpkgs.
-# A devenv.lock with git-hooks (the org shell's hooks) must also match
-# the git-hooks that flake.lock resolves through org-pkgs (in pkgs, its
-# own input). checks.lock-sync fails when they drift; `sync-locks`
-# (devenv script, or nix run .#sync-locks) re-pins devenv.yaml (and
+# devenv.lock's git-hooks (the org shell's hooks) must also match the
+# git-hooks that flake.lock resolves through org-pkgs (in pkgs, its own
+# input). checks.lock-sync fails when they drift; `sync-locks` (devenv
+# script, or nix run .#sync-locks) re-pins devenv.yaml (and
 # dev/flake.lock) to flake.lock.
+#
+# checks.git-hooks: a repo with a devenv shell always has the org git
+# hooks: devenv.yaml follows org-pkgs/git-hooks (devenv reads inputs from
+# the repo's own devenv.yaml only) and .gitignore lists the generated
+# .pre-commit-config.yaml.
 {orgInputs}: {
   lib,
   self,
@@ -70,12 +75,24 @@
   rootRev = revs."flake.lock nixpkgs";
   drifted = lib.filterAttrs (_: rev: rev != rootRev) revs;
 
-  # git-hooks: checked only once devenv.yaml has opted in.
+  # git-hooks: every repo with a devenv shell has it.
   devenvLock = lockOf "${self}/devenv.lock";
   hasGitHooks = hasDevenv && devenvLock.nodes.${devenvLock.root}.inputs ? git-hooks;
-  gitHooksRev = revAt rootLock (lib.optional (pkgsInput != null) pkgsInput ++ ["git-hooks"]);
+  gitHooksPath = lib.optional (pkgsInput != null) pkgsInput ++ ["git-hooks"];
+  gitHooksRev = revAt rootLock gitHooksPath;
   devenvGitHooksRev = revOf devenvLock "git-hooks";
   gitHooksDrifted = hasGitHooks && devenvGitHooksRev != gitHooksRev;
+
+  gitignoreFile = "${self}/.gitignore";
+  gitignored = name:
+    builtins.pathExists gitignoreFile
+    && lib.elem name (map lib.trim (lib.splitString "\n" (builtins.readFile gitignoreFile)));
+  gitHooksProblems = lib.optionals hasDevenv (
+    lib.optional (!hasGitHooks) "devenv.yaml has no git-hooks input"
+    ++ lib.optional (hasGitHooks && pkgsInput != null && devenvLock.nodes.${devenvLock.root}.inputs.git-hooks != gitHooksPath)
+    "devenv.yaml git-hooks does not follow ${pkgsInput}/git-hooks"
+    ++ lib.optional (!gitignored ".pre-commit-config.yaml") ".gitignore does not list .pre-commit-config.yaml"
+  );
 in {
   key = "external-systems/pkgs#flakeModules.dev";
   imports = [
@@ -155,6 +172,20 @@ in {
               echo "Fix: sync-locks (devenv shell) or nix run .#sync-locks" >&2
               exit 1
             ''
+        );
+
+        git-hooks = pkgs.runCommand "git-hooks" {} (
+          if gitHooksProblems == []
+          then "touch $out"
+          else ''
+            echo "The org git hooks are not set up:" >&2
+            ${lib.concatMapStrings (p: "echo ${lib.escapeShellArg "  - ${p}"} >&2\n") gitHooksProblems}
+            echo "Fix: in devenv.yaml under inputs add" >&2
+            echo "  git-hooks:" >&2
+            echo "    follows: org-pkgs/git-hooks" >&2
+            echo "and add .pre-commit-config.yaml to .gitignore; then devenv shell -- true" >&2
+            exit 1
+          ''
         );
       }
       # Docs and slides build on every flake check (mkdocs strict mode
